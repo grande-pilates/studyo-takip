@@ -1,1205 +1,1250 @@
-{\rtf1\ansi\ansicpg1254\cocoartf2867
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\paperw11900\paperh16840\margl1440\margr1440\vieww11320\viewh9120\viewkind0
-\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Stüdyo Takip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#F6F4EF; --panel:#FFFFFF; --ink:#26251F; --ink-soft:#6B695F;
+    --sage:#5B6E52; --sage-dark:#455339; --sage-soft:#E7EBE0;
+    --clay:#A9754F; --clay-soft:#F0E4D8;
+    --alert:#AE4F3D; --alert-soft:#F4E3DE; --line:#E1DCD0;
+    --gray:#9C9A90; --gray-soft:#EDEBE4;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1120px;margin:0 auto;padding:40px 28px 80px;}
 
-\f0\fs24 \cf0 <!DOCTYPE html>\
-<html lang="tr">\
-<head>\
-<meta charset="UTF-8">\
-<title>St\'fcdyo Takip</title>\
-<link rel="preconnect" href="https://fonts.googleapis.com">\
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>\
-<style>\
-  :root\{\
-    --bg:#F6F4EF; --panel:#FFFFFF; --ink:#26251F; --ink-soft:#6B695F;\
-    --sage:#5B6E52; --sage-dark:#455339; --sage-soft:#E7EBE0;\
-    --clay:#A9754F; --clay-soft:#F0E4D8;\
-    --alert:#AE4F3D; --alert-soft:#F4E3DE; --line:#E1DCD0;\
-    --gray:#9C9A90; --gray-soft:#EDEBE4;\
-  \}\
-  *\{box-sizing:border-box;\}\
-  body\{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;\}\
-  .wrap\{max-width:1120px;margin:0 auto;padding:40px 28px 80px;\}\
-\
-  header.top\{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:20px;gap:20px;flex-wrap:wrap;\}\
-  .studio-name\{font-family:'Fraunces',serif;font-weight:600;font-size:34px;letter-spacing:-0.01em;margin:0;\}\
-  .studio-sub\{color:var(--ink-soft);font-size:14px;margin-top:4px;\}\
-  .role-switch\{font-size:12px;color:var(--ink-soft);text-decoration:underline;cursor:pointer;margin-top:8px;display:inline-block;\}\
-  .stats\{display:flex;gap:14px;flex-wrap:wrap;\}\
-  .stat\{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 20px;text-align:center;min-width:104px;box-shadow:0 1px 3px rgba(0,0,0,0.03);\}\
-  .stat .num\{font-family:'Fraunces',serif;font-size:24px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;\}\
-  .stat .num.alert\{color:var(--alert);\}\
-  .stat .num.clay\{color:var(--clay);\}\
-  .stat .label\{font-size:11.5px;color:var(--ink-soft);margin-top:5px;\}\
-\
-  .toolbar\{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;\}\
-\
-  .tabs\{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:22px;\}\
-  .tab-btn\{padding:10px 4px;margin-right:20px;background:none;border:none;font-family:'Inter',sans-serif;font-size:15px;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;\}\
-  .tab-btn.on\{color:var(--ink);border-bottom-color:var(--sage);font-weight:600;\}\
-  .view\{display:none;\}\
-  .view.on\{display:block;\}\
-\
-  .controls\{display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;\}\
-  .search\{flex:1;min-width:220px;padding:11px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);\}\
-  .search:focus\{outline:2px solid var(--sage);outline-offset:1px;\}\
-  .filter-chip\{padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink-soft);font-size:13.5px;cursor:pointer;font-family:'Inter',sans-serif;\}\
-  .filter-chip.on\{background:var(--sage-soft);border-color:var(--sage);color:var(--sage-dark);font-weight:600;\}\
-  .btn-add\{padding:11px 18px;background:var(--sage);color:#fff;border:none;border-radius:8px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;\}\
-  .btn-add:hover\{background:var(--sage-dark);\}\
-  .btn-ghost\{padding:9px 14px;background:transparent;border:1px solid var(--line);color:var(--ink-soft);border-radius:8px;font-size:13.5px;cursor:pointer;font-family:'Inter',sans-serif;\}\
-  .btn-ghost:hover\{border-color:var(--sage);color:var(--sage-dark);\}\
-\
-  .list\{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;\}\
-  .row\{background:var(--panel);padding:16px 18px;display:grid;grid-template-columns:1.5fr 1.5fr 0.9fr 0.8fr auto;gap:14px;align-items:center;\}\
-  .row.head\{background:transparent;padding:0 18px 8px;font-size:12px;color:var(--ink-soft);border:none;\}\
-  .m-name\{font-weight:600;font-size:15px;\}\
-  .m-phone\{font-size:13px;color:var(--ink-soft);margin-top:2px;\}\
-  .m-pkg\{font-size:14px;\}\
-  .m-pkg .type\{color:var(--ink-soft);font-size:12.5px;margin-top:2px;\}\
-  .m-sched\{font-size:12px;color:var(--ink-soft);margin-top:4px;line-height:1.5;\}\
-  .m-sched b\{color:var(--ink);font-weight:600;\}\
-  .sessions\{font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;\}\
-  .sessions.low\{color:var(--alert);\}\
-  .badge\{display:inline-block;padding:3px 9px;border-radius:6px;font-size:12px;font-weight:600;\}\
-  .badge.active\{background:var(--sage-soft);color:var(--sage-dark);\}\
-  .badge.low\{background:var(--alert-soft);color:var(--alert);\}\
-  .badge.done\{background:#EFEDE6;color:var(--ink-soft);\}\
-  .badge.frozen\{background:var(--alert-soft);color:var(--alert);\}\
-  .row-actions\{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;\}\
-  .icon-btn\{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:7px 10px;font-size:12.5px;cursor:pointer;color:var(--ink);font-family:'Inter',sans-serif;\}\
-  .icon-btn:hover\{border-color:var(--sage);color:var(--sage-dark);\}\
-  .icon-btn.danger:hover\{border-color:var(--alert);color:var(--alert);\}\
-\
-  .empty\{text-align:center;padding:60px 20px;color:var(--ink-soft);\}\
-  .empty .big\{font-family:'Fraunces',serif;font-size:20px;color:var(--ink);margin-bottom:6px;\}\
-\
-  .sched-table-wrap\{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);\}\
-  table.sched-table\{border-collapse:collapse;width:100%;min-width:920px;\}\
-  table.sched-table th, table.sched-table td\{border:1px solid var(--line);padding:0;\}\
-  table.sched-table thead th\{background:var(--sage-soft);color:var(--sage-dark);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;padding:10px 8px;text-align:center;\}\
-  table.sched-table thead th:first-child\{text-align:left;padding-left:12px;\}\
-  table.sched-table td.time-cell\{background:var(--bg);font-variant-numeric:tabular-nums;font-weight:600;font-size:13px;padding:10px 12px;white-space:nowrap;color:var(--ink-soft);\}\
-  table.sched-table td.slot-cell\{min-width:130px;vertical-align:top;padding:6px;\}\
-  .cell-entry\{padding:6px 7px;border-radius:6px;background:var(--sage-soft);margin-bottom:4px;font-size:12px;line-height:1.4;cursor:pointer;\}\
-  .cell-entry:last-child\{margin-bottom:0;\}\
-  .cell-entry .en-name\{font-weight:600;color:var(--sage-dark);\}\
-  .cell-entry .en-meta\{color:var(--ink-soft);font-size:11px;margin-top:1px;\}\
-  .cell-entry.frozen\{background:var(--alert-soft);\}\
-  .cell-entry.frozen .en-name\{color:var(--alert);\}\
-  .cell-entry.moved\{background:var(--gray-soft);opacity:0.75;\}\
-  .cell-entry.moved .en-name\{color:var(--gray);text-decoration:line-through;\}\
-  .cell-entry.virtual\{background:var(--clay-soft);\}\
-  .cell-entry.virtual .en-name\{color:var(--clay);\}\
-  table.sched-table td.cell-full\{background:#3B3A34;\}\
-  table.sched-table td.cell-full .en-meta\{color:#C9C7BE;\}\
-\
-  .schedule-slot\{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;background:var(--bg);\}\
-  .schedule-slot-row\{display:flex;gap:6px;margin-bottom:6px;\}\
-  .schedule-slot-row select, .schedule-slot-row input\{flex:1;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:13.5px;font-family:'Inter',sans-serif;background:#fff;color:var(--ink);\}\
-  .schedule-slot-remove\{width:100%;text-align:center;padding:6px;\}\
-\
-  .member-check-list\{max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:6px;background:var(--bg);\}\
-  .member-check-item\{display:flex;align-items:center;gap:8px;padding:7px 6px;font-size:14px;cursor:pointer;border-radius:6px;\}\
-  .member-check-item:hover\{background:var(--sage-soft);\}\
-  .member-check-item input\{width:16px;height:16px;\}\
-  .member-check-item.selected\{background:var(--sage-soft);font-weight:600;\}\
-\
-  .inst-mgmt-row\{display:flex;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);\}\
-  .inst-mgmt-row input\{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:14px;\}\
-\
-  .overlay\{position:fixed;inset:0;background:rgba(38,37,31,0.35);opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;\}\
-  .overlay.open\{opacity:1;pointer-events:auto;\}\
-  .panel\{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:92vw;background:var(--panel);box-shadow:-8px 0 30px rgba(0,0,0,0.08);transform:translateX(100%);transition:transform .25s ease;z-index:11;padding:28px 26px;overflow-y:auto;\}\
-  .panel.open\{transform:translateX(0);\}\
-  .panel h2\{font-family:'Fraunces',serif;font-size:22px;margin:0 0 20px;\}\
-  .field\{margin-bottom:16px;\}\
-  .field label\{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:6px;font-weight:600;\}\
-  .field .hint\{font-size:11.5px;color:var(--ink-soft);margin-top:4px;\}\
-  .field input, .field select\{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:7px;font-size:14.5px;font-family:'Inter',sans-serif;color:var(--ink);background:var(--bg);\}\
-  .field input:focus, .field select:focus\{outline:2px solid var(--sage);outline-offset:1px;\}\
-  .panel-actions\{display:flex;gap:10px;margin-top:22px;\}\
-  .btn-primary\{flex:1;padding:12px;background:var(--sage);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14.5px;\}\
-  .btn-secondary\{padding:12px 16px;background:transparent;color:var(--ink-soft);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:14.5px;\}\
-  .paid-line\{font-size:12px;color:var(--clay);margin-top:3px;\}\
-  .action-menu-btn\{display:block;width:100%;padding:13px;margin-bottom:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);font-size:14.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;color:var(--ink);text-align:left;\}\
-  .action-menu-btn:hover\{border-color:var(--sage);background:var(--sage-soft);color:var(--sage-dark);\}\
-  .action-menu-btn.reject:hover\{border-color:var(--alert);background:var(--alert-soft);color:var(--alert);\}\
-\
-  #loadingNote\{position:fixed;bottom:16px;right:16px;background:var(--ink);color:#fff;padding:8px 14px;border-radius:8px;font-size:12.5px;z-index:50;opacity:0.9;\}\
-\
-  @media (max-width:680px)\{\
-    .row\{grid-template-columns:1fr;gap:8px;\}\
-    .row.head\{display:none;\}\
-    .row-actions\{justify-content:flex-start;margin-top:8px;\}\
-  \}\
-</style>\
-</head>\
-<body>\
-\
-<div class="wrap" id="appRoot" style="display:none;">\
-\
-  <header class="top">\
-    <div>\
-      <p class="studio-name">St\'fcdyo Takip</p>\
-      <p class="studio-sub" id="roleLabel">\'97</p>\
-      <span class="role-switch" id="switchRoleLink">Admin Giri\uc0\u351 i</span>\
-    </div>\
-    <div class="stats" id="statsRow"></div>\
-  </header>\
-\
-  <div class="toolbar" id="hocaToolbar" style="display:none;">\
-    <button class="btn-add" id="hocaDemoAddBtn">+ \'dcye Ekle (Demo)</button>\
-    <button class="btn-ghost" id="hocaDirectAddBtn">+ Direkt \'dcye Ekle</button>\
-    <button class="btn-ghost" id="hocaFreezeBtn">\'dcye Dondur</button>\
-  </div>\
-\
-  <div class="tabs" id="tabsRow"></div>\
-\
-  <!-- \'dcYELER -->\
-  <div class="view" id="view-members">\
-    <div class="controls">\
-      <input class="search" id="searchInput" placeholder="\uc0\u304 sim veya telefon ile ara..." />\
-      <button class="filter-chip on" data-filter="all">T\'fcm\'fc</button>\
-      <button class="filter-chip" data-filter="active">Aktif</button>\
-      <button class="filter-chip" data-filter="low">Azalan (\uc0\u8804 2)</button>\
-      <button class="filter-chip" data-filter="done">Biten</button>\
-      <button class="btn-ghost" id="openFreezeBtn">\'dcye Dondur</button>\
-      <button class="btn-add" id="openAddBtn">+ \'dcye Ekle</button>\
-    </div>\
-    <div id="listArea"></div>\
-  </div>\
-\
-  <!-- DERS PROGRAMI -->\
-  <div class="view" id="view-schedule">\
-    <div class="controls">\
-      <div id="instructorTabs" style="display:flex;gap:8px;flex-wrap:wrap;"></div>\
-    </div>\
-    <div class="sched-table-wrap"><table class="sched-table" id="schedTable"></table></div>\
-  </div>\
-\
-  <!-- DEMO PROGRAMI -->\
-  <div class="view" id="view-demoSchedule">\
-    <div class="controls">\
-      <div id="demoInstructorTabs" style="display:flex;gap:8px;flex-wrap:wrap;"></div>\
-    </div>\
-    <div class="sched-table-wrap"><table class="sched-table" id="demoTable"></table></div>\
-  </div>\
-\
-  <!-- HOCALAR (sadece sahibi) -->\
-  <div class="view" id="view-instructorsMgmt">\
-    <div class="controls">\
-      <button class="btn-add" id="addInstructorBtn">+ Hoca Ekle</button>\
-    </div>\
-    <div id="instMgmtList"></div>\
-  </div>\
-\
-</div>\
-\
-<div class="overlay" id="overlay"></div>\
-\
-<!-- \'dcYE PANEL\uc0\u304  -->\
-<div class="panel" id="panel">\
-  <h2 id="panelTitle">Yeni \'dcye</h2>\
-  <div class="field"><label>\uc0\u304 sim Soyisim</label><input id="f-name" placeholder="\'d6rn. Ay\u351 e Y\u305 lmaz" /></div>\
-  <div class="field"><label>Telefon</label><input id="f-phone" placeholder="0555 000 00 00" /></div>\
-  <div class="field"><label>Paket T\'fcr\'fc</label>\
-    <select id="f-type"></select>\
-    <div class="hint">Kontenjan: Bireysel 1, D\'fcet 2, Grup 4 ki\uc0\u351 i. T\'fcm paketler 8 seans.</div>\
-  </div>\
-  <div class="field" id="f-fee-wrap"><label>\'dccret (\uc0\u8378 )</label><input id="f-fee" type="number" min="0" /></div>\
-  <div class="field"><label>Kalan Seans</label><input id="f-remaining" type="number" min="0" max="8" placeholder="8" /></div>\
-  <div class="field"><label>Ba\uc0\u351 lang\u305 \'e7 Tarihi</label><input id="f-start" type="date" /></div>\
-  <div class="field">\
-    <label>Haftal\uc0\u305 k Ders Program\u305 </label>\
-    <div id="f-schedule-list"></div>\
-    <button type="button" class="btn-ghost" id="addScheduleSlotBtn">+ G\'fcn/Saat Ekle</button>\
-  </div>\
-  <div class="field"><label>Not (opsiyonel)</label><input id="f-notes" placeholder="Sa\uc0\u287 l\u305 k notu, tercih vb." /></div>\
-  <div class="panel-actions">\
-    <button class="btn-secondary" id="cancelBtn">Vazge\'e7</button>\
-    <button class="btn-primary" id="saveBtn">Kaydet</button>\
-  </div>\
-</div>\
-\
-<!-- \'d6DEME / YEN\uc0\u304 LEME PANEL\u304  -->\
-<div class="panel" id="paymentPanel">\
-  <h2>\'d6deme / Paket Yenile</h2>\
-  <p class="studio-sub" id="paymentForName" style="margin-bottom:18px;"></p>\
-  <div class="field"><label>Paket T\'fcr\'fc</label><select id="p-type"></select></div>\
-  <div class="field"><label>Tutar (\uc0\u8378 )</label><input id="p-amount" type="number" min="0" /></div>\
-  <div class="field"><label>Tarih</label><input id="p-date" type="date" /></div>\
-  <div class="field"><label>Not (opsiyonel)</label><input id="p-note" placeholder="\'d6rn. Nakit, 8 seansl\uc0\u305 k paket" /></div>\
-  <div class="hint" style="margin:-8px 0 16px;">Kaydetti\uc0\u287 inizde kalan seans otomatik olarak 8'e ayarlan\u305 r ve paket t\'fcr\'fc g\'fcncellenir.</div>\
-  <div class="panel-actions">\
-    <button class="btn-secondary" id="paymentCancelBtn">Vazge\'e7</button>\
-    <button class="btn-primary" id="paymentSaveBtn">Kaydet</button>\
-  </div>\
-</div>\
-\
-<!-- DONDURMA PANEL\uc0\u304  -->\
-<div class="panel" id="freezePanel">\
-  <h2>\'dcye Dondur</h2>\
-  <div class="field" id="fr-search-wrap"><label>\'dcye Ara</label><input id="fr-search" placeholder="\uc0\u304 sim ile ara..." /></div>\
-  <div class="field" id="fr-list-wrap"><label>\'dcye Se\'e7</label><div class="member-check-list" id="fr-member-list"></div></div>\
-  <div class="field" id="fr-current-status" style="display:none;color:var(--clay);font-size:13px;"></div>\
-  <div class="field"><label>\uc0\u350 u tarihe kadar dondur</label><input id="fr-date" type="date" /></div>\
-  <div class="panel-actions">\
-    <button class="btn-secondary" id="freezeCancelBtn">Vazge\'e7</button>\
-    <button class="btn-primary" id="freezeSaveBtn">Dondur</button>\
-  </div>\
-  <button class="btn-ghost" id="freezeRemoveBtn" style="width:100%;margin-top:10px;display:none;">Dondurmay\uc0\u305  Kald\u305 r</button>\
-</div>\
-\
-<!-- DEMO EKLE PANEL\uc0\u304  -->\
-<div class="panel" id="demoAddPanel">\
-  <h2>Demo Seans Ekle</h2>\
-  <div class="field"><label>\uc0\u304 sim Soyisim</label><input id="d-name" placeholder="\'d6rn. Ay\u351 e Y\u305 lmaz" /></div>\
-  <div class="field"><label>Telefon</label><input id="d-phone" placeholder="0555 000 00 00" /></div>\
-  <div class="field"><label>Demo Tarihi</label><input id="d-date" type="date" /></div>\
-  <div class="field"><label>Hoca</label><select id="d-instructor"></select></div>\
-  <div class="field"><label>Demo Saati</label><select id="d-time"></select>\
-    <div class="hint">Sadece bu hocan\uc0\u305 n ve st\'fcdyonun bo\u351  oldu\u287 u saatler listelenir (09.00\'9622.00).</div>\
-  </div>\
-  <div class="panel-actions">\
-    <button class="btn-secondary" id="demoCancelBtn">Vazge\'e7</button>\
-    <button class="btn-primary" id="demoSaveBtn">Kaydet</button>\
-  </div>\
-</div>\
-\
-<!-- ADMIN G\uc0\u304 R\u304 \u350 \u304  -->\
-<div class="panel" id="adminLoginPanel">\
-  <h2>Admin Giri\uc0\u351 i</h2>\
-  <div class="field"><label>\uc0\u350 ifre</label><input id="admin-pass" type="password" placeholder="\'95\'95\'95\'95\'95\'95\'95\'95" /></div>\
-  <div class="panel-actions">\
-    <button class="btn-secondary" id="adminCancelBtn">Vazge\'e7</button>\
-    <button class="btn-primary" id="adminLoginBtn">Giri\uc0\u351  Yap</button>\
-  </div>\
-</div>\
-\
-<!-- DEMO H\'dcCRE AKS\uc0\u304 YONU -->\
-<div class="panel" id="demoCellActionPanel">\
-  <h2 id="demoCellActionTitle">Demo Seans</h2>\
-  <p class="studio-sub" id="demoCellActionSub" style="margin-bottom:20px;"></p>\
-  <button class="action-menu-btn" id="demoCellAddBtn">\uc0\u9989  \'dcye Ekle</button>\
-  <button class="action-menu-btn reject" id="demoCellRejectBtn">\uc0\u10060  Red</button>\
-  <div class="panel-actions"><button class="btn-secondary" style="flex:1;" id="demoCellCloseBtn">Kapat</button></div>\
-</div>\
-\
-<!-- IZGARA H\'dcCRE AKS\uc0\u304 YON PANEL\u304  (Dondur / De\u287 i\u351 iklik / Erteleme) -->\
-<div class="panel" id="entryActionPanel">\
-  <h2 id="entryActionTitle">\uc0\u304 \u351 lem Se\'e7</h2>\
-  <p class="studio-sub" id="entryActionSub" style="margin-bottom:20px;"></p>\
-  <div id="entryActionMenu">\
-    <button class="action-menu-btn" id="eaFreezeBtn">\uc0\u10052 \u65039  Dondur</button>\
-    <button class="action-menu-btn" id="eaChangeBtn">\uc0\u55357 \u56577  De\u287 i\u351 iklik (bu hafta)</button>\
-    <button class="action-menu-btn" id="eaPostponeBtn">\uc0\u9197 \u65039  Erteleme (bu hafta atla)</button>\
-  </div>\
-  <div id="entryChangeForm" style="display:none;">\
-    <div class="field"><label>Yeni G\'fcn</label><select id="ea-new-day"></select></div>\
-    <div class="field"><label>Yeni Saat</label><input id="ea-new-time" type="time" /></div>\
-    <div class="panel-actions">\
-      <button class="btn-secondary" id="eaChangeCancel">Vazge\'e7</button>\
-      <button class="btn-primary" id="eaChangeConfirm">Onayla</button>\
-    </div>\
-  </div>\
-  <div class="panel-actions" id="entryActionClose">\
-    <button class="btn-secondary" style="flex:1;" id="entryActionCloseBtn">Kapat</button>\
-  </div>\
-</div>\
-\
-<!-- SANAL (TA\uc0\u350 INAN) G\u304 RD\u304  \u304 PTAL PANEL\u304  -->\
-<div class="panel" id="virtualCancelPanel">\
-  <h2>Tek Seferlik De\uc0\u287 i\u351 iklik</h2>\
-  <p class="studio-sub" id="vcSub" style="margin-bottom:20px;"></p>\
-  <div class="panel-actions">\
-    <button class="btn-secondary" id="vcCloseBtn">Kapat</button>\
-    <button class="btn-primary" id="vcCancelBtn" style="background:var(--alert);">De\uc0\u287 i\u351 ikli\u287 i \u304 ptal Et</button>\
-  </div>\
-</div>\
-\
-<div id="loadingNote" style="display:none;">Kaydediliyor...</div>\
-\
-<script>\
-/* =========================================================\
-   SUPABASE AYARLARI \'97 Kendi bilgilerinizi buraya yap\uc0\u305 \u351 t\u305 r\u305 n\
-   ========================================================= */\
-const SUPABASE_URL = 'https://vuivpmqukfzsbpqsylbr.supabase.co';\
-const SUPABASE_ANON_KEY = 'sb_publishable_xKiAHFG6sonCiC6InJG6Iw_gLCrBV6s';\
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);\
-/* ========================================================= */\
-\
-const PACKAGE_TOTAL = 8;\
-const ADMIN_PASSWORD = '23Umut.Mirza';\
-const STUDIO_ROOMS = 2;\
-const PACKAGES = [\
-  \{name:'Bireysel Reformer', price:11000, capacity:1\},\
-  \{name:'D\'fcet Reformer (Alt\uc0\u305 n)', price:6500, capacity:2\},\
-  \{name:'D\'fcet Reformer', price:7500, capacity:2\},\
-  \{name:'Grup Reformer', price:5000, capacity:4\},\
-  \{name:'Grup Reformer (Alt\uc0\u305 n)', price:4000, capacity:4\},\
-];\
-const PRICE_MAP = \{\}; const CAPACITY = \{\};\
-PACKAGES.forEach(p=>\{ PRICE_MAP[p.name]=p.price; CAPACITY[p.name]=p.capacity; \});\
-function packageOptionsHtml(selected)\{\
-  return PACKAGES.map(p=>`<option value="$\{escapeHtml(p.name)\}" $\{p.name===selected?'selected':''\}>$\{escapeHtml(p.name)\} \'97 $\{p.price.toLocaleString('tr-TR')\}\uc0\u8378 </option>`).join('');\
-\}\
-\
-const DAY_ORDER = ['Pazartesi','Sal\uc0\u305 ','\'c7ar\u351 amba','Per\u351 embe','Cuma','Cumartesi','Pazar'];\
-const JS_DOW = ['Pazar','Pazartesi','Sal\uc0\u305 ','\'c7ar\u351 amba','Per\u351 embe','Cuma','Cumartesi'];\
-\
-let role = 'hoca';\
-let members = [];\
-let instructors = [];\
-let demos = [];\
-let editingId = null;\
-let paymentForId = null;\
-let convertingDemoId = null;\
-let selectedFreezeMemberId = null;\
-let currentFilter = 'all';\
-let searchTerm = '';\
-let currentInstructorFilter = 'all';\
-let currentDemoInstructorFilter = 'all';\
-let currentTab = null;\
-let eaContext = null;\
-let vcContext = null;\
-let demoCellContextId = null;\
-\
-const listArea = document.getElementById('listArea');\
-const overlay = document.getElementById('overlay');\
-const ALL_PANEL_IDS = ['panel','paymentPanel','freezePanel','demoAddPanel','entryActionPanel','virtualCancelPanel','adminLoginPanel','demoCellActionPanel'];\
-const panels = ALL_PANEL_IDS.map(id=>document.getElementById(id));\
-\
-function uid(prefix)\{ return prefix+'_'+Date.now()+'_'+Math.floor(Math.random()*1000); \}\
-function escapeHtml(str)\{ const d=document.createElement('div'); d.textContent = str||''; return d.innerHTML; \}\
-function todayStr()\{ return fmtDate(new Date()); \}\
-function fmtDate(d)\{ const y=d.getFullYear(), mo=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return `$\{y\}-$\{mo\}-$\{da\}`; \}\
-function mondayOf(d)\{ const dow=(d.getDay()+6)%7; const m=new Date(d); m.setDate(d.getDate()-dow); m.setHours(0,0,0,0); return m; \}\
-function dateForDayInWeek(refDate, targetDayName)\{ const mon=mondayOf(refDate); const idx=DAY_ORDER.indexOf(targetDayName); const d=new Date(mon); d.setDate(mon.getDate()+idx); return d; \}\
-function getInstructorName(id)\{ const f = instructors.find(i=>i.id===id); return f ? f.name : '\'97'; \}\
-function showSaving(v)\{ document.getElementById('loadingNote').style.display = v ? 'block' : 'none'; \}\
-\
-/* =========================================================\
-   SUPABASE OKUMA / YAZMA \'97 "studio_data" tablosu \'fczerinden\
-   ========================================================= */\
-async function supaGet(key)\{\
-  const \{ data, error \} = await supabaseClient.from('studio_data').select('value').eq('key', key).maybeSingle();\
-  if(error)\{ console.error('Supabase okuma hatas\uc0\u305  ('+key+'):', error); return null; \}\
-  return data ? data.value : null;\
-\}\
-async function supaSet(key, valueStr)\{\
-  showSaving(true);\
-  const \{ error \} = await supabaseClient.from('studio_data').upsert(\{ key: key, value: valueStr, updated_at: new Date().toISOString() \});\
-  showSaving(false);\
-  if(error)\{ console.error('Supabase yazma hatas\uc0\u305  ('+key+'):', error); alert('Kaydedilirken bir sorun olu\u351 tu. \u304 nternet ba\u287 lant\u305 n\u305 z\u305  ve Supabase ayarlar\u305 n\u305 z\u305  kontrol edin.'); \}\
-\}\
-\
-/* ---------- ROL / ADM\uc0\u304 N (cihaza \'f6zel \'97 localStorage) ---------- */\
-function initRole()\{\
-  role = localStorage.getItem('studio_role') || 'hoca';\
-  showApp();\
-\}\
-function setRole(r)\{\
-  role = r;\
-  localStorage.setItem('studio_role', r);\
-  showApp();\
-\}\
-document.getElementById('switchRoleLink').addEventListener('click', ()=>\{\
-  if(role==='sahibi')\{\
-    if(confirm('Hoca ekran\uc0\u305 na d\'f6nmek istedi\u287 inize emin misiniz?')) setRole('hoca');\
-  \} else \{\
-    document.getElementById('admin-pass').value = '';\
-    openPanel('adminLoginPanel');\
-  \}\
-\});\
-document.getElementById('adminCancelBtn').addEventListener('click', closeAllPanels);\
-document.getElementById('adminLoginBtn').addEventListener('click', ()=>\{\
-  const pass = document.getElementById('admin-pass').value;\
-  if(pass === ADMIN_PASSWORD)\{ closeAllPanels(); setRole('sahibi'); \}\
-  else \{ alert('Hatal\uc0\u305  \u351 ifre.'); \}\
-\});\
-\
-function showApp()\{\
-  document.getElementById('appRoot').style.display='block';\
-  document.getElementById('roleLabel').textContent = role==='hoca' ? 'Hoca Ekran\uc0\u305 ' : 'St\'fcdyo Sahibi Ekran\u305 ';\
-  document.getElementById('switchRoleLink').textContent = role==='hoca' ? 'Admin Giri\uc0\u351 i' : 'Hoca Ekran\u305 na D\'f6n';\
-  document.getElementById('hocaToolbar').style.display = role==='hoca' ? 'flex' : 'none';\
-  buildTabs();\
-  loadAll();\
-\}\
-\
-/* ---------- SEKMELER ---------- */\
-function buildTabs()\{\
-  const tabs = role==='hoca'\
-    ? [\{id:'schedule',label:'Ders Program\uc0\u305 '\},\{id:'demoSchedule',label:'Demo Program\u305 '\},\{id:'members',label:'\'dcyeler'\}]\
-    : [\{id:'members',label:'\'dcyeler'\},\{id:'schedule',label:'Ders Program\uc0\u305 '\},\{id:'demoSchedule',label:'Demo Program\u305 '\},\{id:'instructorsMgmt',label:'Hocalar'\}];\
-  const wrap = document.getElementById('tabsRow');\
-  wrap.innerHTML = tabs.map((t,i)=>`<button class="tab-btn $\{i===0?'on':''\}" data-view="$\{t.id\}">$\{t.label\}</button>`).join('');\
-  currentTab = tabs[0].id;\
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));\
-  document.getElementById('view-'+currentTab).classList.add('on');\
-  wrap.querySelectorAll('.tab-btn').forEach(btn=>\{\
-    btn.addEventListener('click', ()=>\{\
-      wrap.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));\
-      btn.classList.add('on');\
-      currentTab = btn.dataset.view;\
-      document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));\
-      document.getElementById('view-'+currentTab).classList.add('on');\
-      if(currentTab==='schedule') renderScheduleGrid();\
-      if(currentTab==='demoSchedule') renderDemoGrid();\
-      if(currentTab==='instructorsMgmt') renderInstructorMgmt();\
-      if(currentTab==='members') render();\
-    \});\
-  \});\
-\}\
-\
-/* ---------- VER\uc0\u304  Y\'dcKLEME ---------- */\
-async function loadAll()\{\
-  try\{ members = JSON.parse(await supaGet('members') || '[]'); \}catch(e)\{ members = []; \}\
-  members.forEach(m=>\{ if(!m.schedule) m.schedule=[]; if(!m.payments) m.payments=[]; \});\
-\
-  let instRaw = null;\
-  try\{ instRaw = JSON.parse(await supaGet('instructors') || 'null'); \}catch(e)\{ instRaw = null; \}\
-  if(!instRaw || instRaw.length===0)\{\
-    instructors = [\{id:uid('i'),name:'Hoca 1'\},\{id:uid('i'),name:'Hoca 2'\},\{id:uid('i'),name:'Hoca 3'\}];\
-    await saveInstructors();\
-  \} else \{ instructors = instRaw; \}\
-\
-  try\{ demos = JSON.parse(await supaGet('demos') || '[]'); \}catch(e)\{ demos = []; \}\
-\
-  processSchedules();\
-  renderStats();\
-  renderInstructorTabs();\
-  renderDemoInstructorTabs();\
-  if(currentTab==='members') render();\
-  if(currentTab==='schedule') renderScheduleGrid();\
-  if(currentTab==='demoSchedule') renderDemoGrid();\
-  if(currentTab==='instructorsMgmt') renderInstructorMgmt();\
-\}\
-async function saveMembers()\{ await supaSet('members', JSON.stringify(members)); \}\
-async function saveInstructors()\{ await supaSet('instructors', JSON.stringify(instructors)); \}\
-async function saveDemos()\{ await supaSet('demos', JSON.stringify(demos)); \}\
-\
-/* ---------- OTOMAT\uc0\u304 K SEANS D\'dc\u350 ME + TEK SEFERL\u304 K DE\u286 \u304 \u350 \u304 KL\u304 K ---------- */\
-function mostRecentOccurrence(dayName, timeStr, now)\{\
-  const targetDow = JS_DOW.indexOf(dayName);\
-  const [hh,mm] = (timeStr||'00:00').split(':').map(Number);\
-  let d = new Date(now);\
-  d.setHours(hh||0, mm||0, 0, 0);\
-  let diff = (d.getDay() - targetDow + 7) % 7;\
-  d.setDate(d.getDate() - diff);\
-  if(d > now)\{ d.setDate(d.getDate()-7); \}\
-  return d;\
-\}\
-function nextOccurrence(dayName, timeStr, now)\{ const d = mostRecentOccurrence(dayName, timeStr, now); d.setDate(d.getDate()+7); return d; \}\
-\
-function processSchedules()\{\
-  const now = new Date();\
-  let changed = false;\
-  members.forEach(m=>\{\
-    (m.schedule||[]).forEach(slot=>\{\
-      const occ = mostRecentOccurrence(slot.day, slot.time, now);\
-      const occStr = fmtDate(occ);\
-      const hasActiveOverrideForThisOcc = slot.override && slot.override.active && slot.override.forOccDate === occStr;\
-      if(!hasActiveOverrideForThisOcc && occStr > (slot.lastDeductedDate || ''))\{\
-        const isFrozen = m.frozenUntil && occStr <= m.frozenUntil;\
-        if(!isFrozen && m.remaining>0) m.remaining -= 1;\
-        slot.lastDeductedDate = occStr;\
-        changed = true;\
-      \}\
-      if(slot.override && slot.override.active)\{\
-        const targetDate = dateForDayInWeek(new Date(slot.override.forOccDate+'T00:00:00'), slot.override.day);\
-        const [hh,mm] = (slot.override.time||'00:00').split(':').map(Number);\
-        targetDate.setHours(hh||0, mm||0, 0, 0);\
-        if(targetDate <= now)\{\
-          const isFrozen = m.frozenUntil && slot.override.forOccDate <= m.frozenUntil;\
-          if(!isFrozen && m.remaining>0) m.remaining -= 1;\
-          slot.lastDeductedDate = slot.override.forOccDate;\
-          slot.override.active = false;\
-          changed = true;\
-        \}\
-      \}\
-    \});\
-  \});\
-  if(changed) saveMembers();\
-\}\
-setInterval(async ()=>\{ processSchedules(); renderStats(); if(currentTab==='schedule') renderScheduleGrid(); if(currentTab==='members') render(); \}, 30000);\
-\
-/* ---------- \uc0\u304 STAT\u304 ST\u304 KLER ---------- */\
-function statusOf(m)\{ if(m.remaining<=0) return 'done'; if(m.remaining<=2) return 'low'; return 'active'; \}\
-function totalPaid(m)\{ return (m.payments||[]).reduce((s,p)=>s+Number(p.amount||0),0); \}\
-function scheduleSummary(m)\{\
-  return (m.schedule||[]).map(s=>`<b>$\{s.day\} $\{s.time\}</b> \'b7 $\{escapeHtml(getInstructorName(s.instructorId))\}`).join('<br>') || '<span style="color:var(--ink-soft)">Program yok</span>';\
-\}\
-\
-function renderStats()\{\
-  const wrap = document.getElementById('statsRow');\
-  const total = members.length;\
-  const active = members.filter(m=>statusOf(m)==='active').length;\
-  const low = members.filter(m=>statusOf(m)==='low').length;\
-  const frozen = members.filter(m=>m.frozenUntil && todayStr()<=m.frozenUntil).length;\
-  const nowMonth = todayStr().slice(0,7);\
-  let monthRevenue = 0;\
-  members.forEach(m=>(m.payments||[]).forEach(p=>\{ if((p.date||'').slice(0,7)===nowMonth) monthRevenue += Number(p.amount||0); \}));\
-\
-  let html = `\
-    <div class="stat"><div class="num">$\{total\}</div><div class="label">Toplam \'fcye</div></div>\
-    <div class="stat"><div class="num">$\{active\}</div><div class="label">Aktif \'fcye</div></div>\
-    <div class="stat"><div class="num alert">$\{low\}</div><div class="label">Azalan paket</div></div>\
-    <div class="stat"><div class="num alert">$\{frozen\}</div><div class="label">Donduruldu</div></div>`;\
-  if(role==='sahibi')\{\
-    html += `<div class="stat"><div class="num clay">$\{monthRevenue.toLocaleString('tr-TR')\}\uc0\u8378 </div><div class="label">Bu ay gelir</div></div>`;\
-  \}\
-  wrap.innerHTML = html;\
-\}\
-\
-/* ---------- \'dcYELER ---------- */\
-function render()\{\
-  renderStats();\
-  let filtered = members.filter(m=>\{\
-    const matchesSearch = !searchTerm || m.name.toLowerCase().includes(searchTerm) || (m.phone||'').includes(searchTerm);\
-    const st = statusOf(m);\
-    const matchesFilter = currentFilter==='all' || st===currentFilter;\
-    return matchesSearch && matchesFilter;\
-  \});\
-\
-  if(members.length===0)\{\
-    listArea.innerHTML = '<div class="empty"><div class="big">Hen\'fcz \'fcye yok</div>"+ \'dcye Ekle" ile ilk \'fcyenizi kaydedin.</div>';\
-    return;\
-  \}\
-  if(filtered.length===0)\{\
-    listArea.innerHTML = '<div class="empty"><div class="big">Sonu\'e7 bulunamad\uc0\u305 </div>Arama veya filtreyi de\u287 i\u351 tirin.</div>';\
-    return;\
-  \}\
-\
-  let html = '<div class="list"><div class="row head"><div>\'dcye</div><div>Paket / Program</div><div>Kalan Seans</div><div>Durum</div><div></div></div>';\
-  filtered.forEach(m=>\{\
-    const st = statusOf(m);\
-    const badgeText = st==='active' ? 'Aktif' : st==='low' ? 'Azal\uc0\u305 yor' : 'Bitti';\
-    const paid = totalPaid(m);\
-    const isFrozenNow = m.frozenUntil && todayStr() <= m.frozenUntil;\
-    html += `\
-    <div class="row">\
-      <div><div class="m-name">$\{escapeHtml(m.name)\}</div><div class="m-phone">$\{escapeHtml(m.phone||'')\}</div></div>\
-      <div class="m-pkg">$\{escapeHtml(m.type)\}\
-        <div class="m-sched">$\{scheduleSummary(m)\}</div>\
-        $\{paid>0?'<div class="paid-line">\'d6denen: '+paid.toLocaleString('tr-TR')+'\uc0\u8378 </div>':''\}\
-      </div>\
-      <div class="sessions $\{st==='low'||st==='done'?'low':''\}">$\{m.remaining\} / $\{PACKAGE_TOTAL\}</div>\
-      <div>\
-        <span class="badge $\{st\}">$\{badgeText\}</span>\
-        $\{isFrozenNow?`<div class="badge frozen" style="margin-top:5px;">Donduruldu \'b7 $\{m.frozenUntil\}</div>`:''\}\
-      </div>\
-      <div class="row-actions">\
-        <button class="icon-btn" onclick="openPayment('$\{m.id\}')">\'d6deme Ekle</button>\
-        <button class="icon-btn" onclick="openEdit('$\{m.id\}')">D\'fczenle</button>\
-        <button class="icon-btn danger" onclick="deleteMember('$\{m.id\}')">Sil</button>\
-      </div>\
-    </div>`;\
-  \});\
-  html += '</div>';\
-  listArea.innerHTML = html;\
-\}\
-\
-async function deleteMember(id)\{\
-  if(!confirm('Bu \'fcyeyi silmek istedi\uc0\u287 inize emin misiniz?')) return;\
-  members = members.filter(x=>x.id!==id);\
-  await saveMembers();\
-  render(); renderScheduleGrid();\
-\}\
-\
-/* ---------- \'dcYE PANEL\uc0\u304  / HAFTALIK PROGRAM ---------- */\
-function addSlotRow(slot)\{\
-  slot = slot || \{id: uid('s'), day:'Pazartesi', time:'10:00', instructorId:(instructors[0]?instructors[0].id:null), lastDeductedDate:''\};\
-  const wrap = document.createElement('div');\
-  wrap.className = 'schedule-slot';\
-  wrap.dataset.slotId = slot.id;\
-  wrap.dataset.lastDeducted = slot.lastDeductedDate||'';\
-  wrap.innerHTML = `\
-    <div class="schedule-slot-row">\
-      <select class="slot-day">$\{DAY_ORDER.map(d=>`<option $\{d===slot.day?'selected':''\}>$\{d\}</option>`).join('')\}</select>\
-      <input type="time" class="slot-time" value="$\{slot.time||'10:00'\}" />\
-    </div>\
-    <div class="schedule-slot-row">\
-      <select class="slot-instructor">$\{instructors.map(inst=>`<option value="$\{inst.id\}" $\{inst.id===slot.instructorId?'selected':''\}>$\{escapeHtml(inst.name)\}</option>`).join('')\}</select>\
-    </div>\
-    <button type="button" class="icon-btn danger schedule-slot-remove">Bu Program\uc0\u305  Sil</button>\
-  `;\
-  wrap.querySelector('.schedule-slot-remove').addEventListener('click', ()=>wrap.remove());\
-  document.getElementById('f-schedule-list').appendChild(wrap);\
-\}\
-document.getElementById('addScheduleSlotBtn').addEventListener('click', ()=>addSlotRow());\
-\
-function readSlotRows()\{\
-  return Array.from(document.querySelectorAll('#f-schedule-list .schedule-slot')).map(wrap=>(\{\
-    id: wrap.dataset.slotId,\
-    day: wrap.querySelector('.slot-day').value,\
-    time: wrap.querySelector('.slot-time').value || '10:00',\
-    instructorId: wrap.querySelector('.slot-instructor').value,\
-    lastDeductedDate: wrap.dataset.lastDeducted || ''\
-  \}));\
-\}\
-\
-function getSlotOccupants(day, time, instructorId, excludeMemberId)\{\
-  let occupants = [];\
-  members.forEach(m=>\{\
-    if(m.id === excludeMemberId) return;\
-    (m.schedule||[]).forEach(s=>\{\
-      if(s.day===day && s.time===time && s.instructorId===instructorId)\{\
-        occupants.push(\{memberId:m.id, memberName:m.name, type:m.type\});\
-      \}\
-    \});\
-  \});\
-  return occupants;\
-\}\
-\
-function openEdit(id)\{\
-  const m = members.find(x=>x.id===id);\
-  if(!m) return;\
-  editingId = id; convertingDemoId = null;\
-  document.getElementById('f-fee-wrap').style.display = 'none';\
-  document.getElementById('panelTitle').textContent = '\'dcyeyi D\'fczenle';\
-  document.getElementById('f-type').innerHTML = packageOptionsHtml(m.type);\
-  document.getElementById('f-name').value = m.name;\
-  document.getElementById('f-phone').value = m.phone||'';\
-  document.getElementById('f-remaining').value = m.remaining;\
-  document.getElementById('f-start').value = m.start||'';\
-  document.getElementById('f-notes').value = m.notes||'';\
-  document.getElementById('f-schedule-list').innerHTML = '';\
-  (m.schedule||[]).forEach(s=>addSlotRow(s));\
-  openPanel('panel');\
-\}\
-document.getElementById('f-type').addEventListener('change', (e)=>\{ document.getElementById('f-fee').value = PRICE_MAP[e.target.value]||''; \});\
-\
-/* ---------- PANEL Y\'d6NET\uc0\u304 M\u304  ---------- */\
-function openPanel(id)\{ overlay.classList.add('open'); document.getElementById(id).classList.add('open'); \}\
-function closeAllPanels()\{\
-  overlay.classList.remove('open');\
-  panels.forEach(p=>p.classList.remove('open'));\
-  editingId = null; paymentForId = null; selectedFreezeMemberId = null; convertingDemoId = null; eaContext = null; vcContext = null; demoCellContextId = null;\
-  document.getElementById('entryChangeForm').style.display='none';\
-  document.getElementById('entryActionMenu').style.display='block';\
-\}\
-overlay.addEventListener('click', closeAllPanels);\
-\
-function openFreshMemberPanel(prefill)\{\
-  prefill = prefill || \{\};\
-  editingId = null;\
-  convertingDemoId = prefill.demoId || null;\
-  document.getElementById('f-fee-wrap').style.display = 'block';\
-  document.getElementById('panelTitle').textContent = 'Yeni \'dcye';\
-  document.getElementById('f-type').innerHTML = packageOptionsHtml('Grup Reformer');\
-  document.getElementById('f-name').value = prefill.name || '';\
-  document.getElementById('f-phone').value = prefill.phone || '';\
-  document.getElementById('f-fee').value = PRICE_MAP['Grup Reformer'];\
-  document.getElementById('f-remaining').value = PACKAGE_TOTAL;\
-  document.getElementById('f-start').value = todayStr();\
-  document.getElementById('f-notes').value = '';\
-  document.getElementById('f-schedule-list').innerHTML = '';\
-  const slotCount = prefill.slotCount || 1;\
-  for(let i=0;i<slotCount;i++)\{\
-    addSlotRow(\{id: uid('s'), day:'Pazartesi', time:'10:00', instructorId: prefill.instructorId || (instructors[0]?instructors[0].id:null), lastDeductedDate:''\});\
-  \}\
-  openPanel('panel');\
-\}\
-document.getElementById('openAddBtn').addEventListener('click', ()=>openFreshMemberPanel());\
-document.getElementById('hocaDirectAddBtn').addEventListener('click', ()=>openFreshMemberPanel());\
-document.getElementById('cancelBtn').addEventListener('click', closeAllPanels);\
-\
-document.getElementById('saveBtn').addEventListener('click', async ()=>\{\
-  const name = document.getElementById('f-name').value.trim();\
-  const phone = document.getElementById('f-phone').value.trim();\
-  const type = document.getElementById('f-type').value;\
-  const fee = parseFloat(document.getElementById('f-fee').value) || 0;\
-  const remaining = document.getElementById('f-remaining').value === '' ? PACKAGE_TOTAL : parseInt(document.getElementById('f-remaining').value);\
-  const start = document.getElementById('f-start').value;\
-  const notes = document.getElementById('f-notes').value.trim();\
-  const schedule = readSlotRows();\
-  if(!name)\{ alert('L\'fctfen \'fcye ismini girin.'); return; \}\
-\
-  for(const slot of schedule)\{\
-    const occupants = getSlotOccupants(slot.day, slot.time, slot.instructorId, editingId);\
-    const cap = CAPACITY[type] || 1;\
-    const existingType = occupants.length ? occupants[0].type : null;\
-    if(existingType && existingType !== type)\{\
-      alert(`$\{getInstructorName(slot.instructorId)\} \'b7 $\{slot.day\} $\{slot.time\} saatinde zaten "$\{existingType\}" dersi var. Bu saate "$\{type\}" olarak eklenemez.`);\
-      return;\
-    \}\
-    if(occupants.length + 1 > cap)\{\
-      alert(`$\{getInstructorName(slot.instructorId)\} \'b7 $\{slot.day\} $\{slot.time\} dersi dolu ($\{cap\} ki\uc0\u351 ilik "$\{type\}" kontenjan\u305  doldu).`);\
-      return;\
-    \}\
-  \}\
-\
-  let newMemberId = null;\
-  if(editingId)\{\
-    const m = members.find(x=>x.id===editingId);\
-    Object.assign(m, \{name, phone, type, total: PACKAGE_TOTAL, remaining, start, notes, schedule\});\
-  \} else \{\
-    newMemberId = uid('m');\
-    const payments = fee>0 ? [\{id:uid('p'), amount:fee, date: start||todayStr(), note:'\uc0\u304 lk kay\u305 t \'f6demesi'\}] : [];\
-    members.push(\{id: newMemberId, name, phone, type, total: PACKAGE_TOTAL, remaining, start, notes, schedule, payments\});\
-  \}\
-  await saveMembers();\
-\
-  if(convertingDemoId)\{\
-    const demo = demos.find(d=>d.id===convertingDemoId);\
-    if(demo)\{ demo.status='converted'; demo.memberId=newMemberId; await saveDemos(); \}\
-  \}\
-\
-  closeAllPanels();\
-  processSchedules();\
-  renderStats();\
-  if(currentTab==='members') render();\
-  if(currentTab==='schedule') renderScheduleGrid();\
-  if(currentTab==='demoSchedule') renderDemoGrid();\
-\});\
-\
-document.getElementById('searchInput').addEventListener('input', (e)=>\{ searchTerm = e.target.value.toLowerCase(); render(); \});\
-document.querySelectorAll('#view-members .filter-chip').forEach(btn=>\{\
-  btn.addEventListener('click', ()=>\{\
-    document.querySelectorAll('#view-members .filter-chip').forEach(b=>b.classList.remove('on'));\
-    btn.classList.add('on'); currentFilter = btn.dataset.filter; render();\
-  \});\
-\});\
-\
-/* ---------- \'d6DEME / PAKET YEN\uc0\u304 LEME ---------- */\
-function openPayment(id)\{\
-  paymentForId = id;\
-  const m = members.find(x=>x.id===id);\
-  document.getElementById('paymentForName').textContent = m ? m.name : '';\
-  document.getElementById('p-type').innerHTML = packageOptionsHtml(m?m.type:'Grup Reformer');\
-  document.getElementById('p-amount').value = m ? (PRICE_MAP[m.type]||'') : '';\
-  document.getElementById('p-date').value = todayStr();\
-  document.getElementById('p-note').value = '';\
-  openPanel('paymentPanel');\
-\}\
-document.getElementById('p-type').addEventListener('change', (e)=>\{ document.getElementById('p-amount').value = PRICE_MAP[e.target.value]||''; \});\
-document.getElementById('paymentCancelBtn').addEventListener('click', closeAllPanels);\
-document.getElementById('paymentSaveBtn').addEventListener('click', async ()=>\{\
-  const type = document.getElementById('p-type').value;\
-  const amount = parseFloat(document.getElementById('p-amount').value);\
-  const date = document.getElementById('p-date').value || todayStr();\
-  const note = document.getElementById('p-note').value.trim();\
-  if(!amount || amount<=0)\{ alert('L\'fctfen ge\'e7erli bir tutar girin.'); return; \}\
-  const m = members.find(x=>x.id===paymentForId);\
-  if(!m) return;\
-  m.payments = m.payments || [];\
-  m.payments.push(\{id: uid('p'), amount, date, note\});\
-  m.type = type;\
-  m.remaining = PACKAGE_TOTAL;\
-  await saveMembers();\
-  closeAllPanels();\
-  render(); renderScheduleGrid();\
-\});\
-\
-/* ---------- \'dcYE DONDURMA ---------- */\
-function renderFreezeMemberList(filterText)\{\
-  const wrap = document.getElementById('fr-member-list');\
-  const term = (filterText||'').toLowerCase();\
-  const filtered = members.filter(m=>!term || m.name.toLowerCase().includes(term) || (m.phone||'').includes(term));\
-  if(filtered.length===0)\{ wrap.innerHTML = '<div class="empty" style="padding:20px;">\'dcye bulunamad\uc0\u305 </div>'; return; \}\
-  wrap.innerHTML = filtered.map(m=>`\
-    <label class="member-check-item $\{selectedFreezeMemberId===m.id?'selected':''\}">\
-      <input type="radio" name="fr-radio" value="$\{m.id\}" $\{selectedFreezeMemberId===m.id?'checked':''\}/>\
-      $\{escapeHtml(m.name)\} $\{m.frozenUntil && todayStr()<=m.frozenUntil ? '\'b7 <span style="color:var(--alert);">donduruldu</span>' : ''\}\
-    </label>`).join('');\
-  wrap.querySelectorAll('input[type=radio]').forEach(r=>\{\
-    r.addEventListener('change', ()=>\{ selectedFreezeMemberId = r.value; updateFreezeStatusDisplay(); renderFreezeMemberList(document.getElementById('fr-search').value); \});\
-  \});\
-\}\
-function updateFreezeStatusDisplay()\{\
-  const m = members.find(x=>x.id===selectedFreezeMemberId);\
-  const statusEl = document.getElementById('fr-current-status');\
-  const removeBtn = document.getElementById('freezeRemoveBtn');\
-  if(m && m.frozenUntil)\{\
-    statusEl.style.display = 'block';\
-    statusEl.textContent = `Bu \'fcye $\{m.frozenUntil\} tarihine kadar donduruldu.`;\
-    document.getElementById('fr-date').value = m.frozenUntil;\
-    removeBtn.style.display = 'block';\
-  \} else \{\
-    statusEl.style.display = 'none';\
-    document.getElementById('fr-date').value = '';\
-    removeBtn.style.display = 'none';\
-  \}\
-\}\
-function openFreezePanelFor(memberId)\{\
-  selectedFreezeMemberId = memberId || null;\
-  document.getElementById('fr-search').value = '';\
-  if(memberId)\{\
-    document.getElementById('fr-search-wrap').style.display='none';\
-    document.getElementById('fr-list-wrap').style.display='none';\
-    updateFreezeStatusDisplay();\
-  \} else \{\
-    document.getElementById('fr-search-wrap').style.display='block';\
-    document.getElementById('fr-list-wrap').style.display='block';\
-    document.getElementById('fr-current-status').style.display='none';\
-    document.getElementById('freezeRemoveBtn').style.display='none';\
-    document.getElementById('fr-date').value='';\
-    renderFreezeMemberList('');\
-  \}\
-  openPanel('freezePanel');\
-\}\
-document.getElementById('openFreezeBtn').addEventListener('click', ()=>openFreezePanelFor(null));\
-document.getElementById('hocaFreezeBtn').addEventListener('click', ()=>openFreezePanelFor(null));\
-document.getElementById('fr-search').addEventListener('input', (e)=>renderFreezeMemberList(e.target.value));\
-document.getElementById('freezeCancelBtn').addEventListener('click', closeAllPanels);\
-document.getElementById('freezeSaveBtn').addEventListener('click', async ()=>\{\
-  if(!selectedFreezeMemberId)\{ alert('L\'fctfen bir \'fcye se\'e7in.'); return; \}\
-  const date = document.getElementById('fr-date').value;\
-  if(!date)\{ alert('L\'fctfen bir tarih girin.'); return; \}\
-  const m = members.find(x=>x.id===selectedFreezeMemberId);\
-  if(!m) return;\
-  m.frozenUntil = date;\
-  await saveMembers();\
-  closeAllPanels();\
-  render(); renderScheduleGrid();\
-\});\
-document.getElementById('freezeRemoveBtn').addEventListener('click', async ()=>\{\
-  const m = members.find(x=>x.id===selectedFreezeMemberId);\
-  if(!m) return;\
-  delete m.frozenUntil;\
-  await saveMembers();\
-  closeAllPanels();\
-  render(); renderScheduleGrid();\
-\});\
-\
-/* ---------- HOCA SEKMELER\uc0\u304  (Ders Program\u305  filtre) ---------- */\
-function renderInstructorTabs()\{\
-  const wrap = document.getElementById('instructorTabs');\
-  let html = `<button class="filter-chip $\{currentInstructorFilter==='all'?'on':''\}" data-inst="all">T\'fcm\'fc</button>`;\
-  instructors.forEach(inst=>\{ html += `<button class="filter-chip $\{currentInstructorFilter===inst.id?'on':''\}" data-inst="$\{inst.id\}">$\{escapeHtml(inst.name)\}</button>`; \});\
-  wrap.innerHTML = html;\
-  wrap.querySelectorAll('.filter-chip').forEach(btn=>\{\
-    btn.addEventListener('click', ()=>\{\
-      wrap.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('on'));\
-      btn.classList.add('on'); currentInstructorFilter = btn.dataset.inst; renderScheduleGrid();\
-    \});\
-  \});\
-\}\
-function renderDemoInstructorTabs()\{\
-  const wrap = document.getElementById('demoInstructorTabs');\
-  let html = `<button class="filter-chip $\{currentDemoInstructorFilter==='all'?'on':''\}" data-inst="all">T\'fcm\'fc</button>`;\
-  instructors.forEach(inst=>\{ html += `<button class="filter-chip $\{currentDemoInstructorFilter===inst.id?'on':''\}" data-inst="$\{inst.id\}">$\{escapeHtml(inst.name)\}</button>`; \});\
-  wrap.innerHTML = html;\
-  wrap.querySelectorAll('.filter-chip').forEach(btn=>\{\
-    btn.addEventListener('click', ()=>\{\
-      wrap.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('on'));\
-      btn.classList.add('on'); currentDemoInstructorFilter = btn.dataset.inst; renderDemoGrid();\
-    \});\
-  \});\
-\}\
-\
-/* ---------- HOCA Y\'d6NET\uc0\u304 M\u304  (sahibi) ---------- */\
-function renderInstructorMgmt()\{\
-  const wrap = document.getElementById('instMgmtList');\
-  wrap.innerHTML = instructors.map(inst=>`\
-    <div class="inst-mgmt-row">\
-      <input value="$\{escapeHtml(inst.name)\}" data-inst-id="$\{inst.id\}" class="inst-name-input" />\
-      <button class="icon-btn" onclick="renameInstructor('$\{inst.id\}')">Kaydet</button>\
-      <button class="icon-btn danger" onclick="removeInstructor('$\{inst.id\}')">Sil</button>\
-    </div>`).join('');\
-\}\
-async function renameInstructor(id)\{\
-  const input = document.querySelector(`.inst-name-input[data-inst-id="$\{id\}"]`);\
-  const newName = input.value.trim();\
-  if(!newName) return;\
-  const inst = instructors.find(i=>i.id===id);\
-  if(inst)\{ inst.name = newName; await saveInstructors(); renderInstructorTabs(); renderDemoInstructorTabs(); renderInstructorMgmt(); render(); renderScheduleGrid(); \}\
-\}\
-async function removeInstructor(id)\{\
-  if(!confirm('Bu hocay\uc0\u305  silmek istedi\u287 inize emin misiniz? Bu hocaya ba\u287 l\u305  ders programlar\u305  kalabilir.')) return;\
-  instructors = instructors.filter(i=>i.id!==id);\
-  await saveInstructors();\
-  renderInstructorTabs(); renderDemoInstructorTabs(); renderInstructorMgmt();\
-\}\
-document.getElementById('addInstructorBtn').addEventListener('click', async ()=>\{\
-  const name = prompt('Yeni hocan\uc0\u305 n ad\u305 :');\
-  if(!name || !name.trim()) return;\
-  instructors.push(\{id: uid('i'), name: name.trim()\});\
-  await saveInstructors();\
-  renderInstructorTabs(); renderDemoInstructorTabs(); renderInstructorMgmt();\
-\});\
-\
-/* ---------- \'c7ALI\uc0\u350 MA SAATLER\u304  (09:00\'9622:00) ---------- */\
-function getAllTimeSlots()\{\
-  let base = [];\
-  for(let h=9; h<=22; h++)\{ base.push(String(h).padStart(2,'0')+':00'); \}\
-  let used = new Set();\
-  members.forEach(m=>(m.schedule||[]).forEach(s=>\{ used.add(s.time); if(s.override&&s.override.active) used.add(s.override.time); \}));\
-  demos.forEach(d=>used.add(d.time));\
-  used.forEach(t=>\{ if(!base.includes(t)) base.push(t); \});\
-  return base.sort((a,b)=>a.localeCompare(b));\
-\}\
-\
-/* ---------- DERS PROGRAMI (EXCEL TABLOSU) ---------- */\
-function renderScheduleGrid()\{\
-  const now = new Date();\
-  const times = getAllTimeSlots();\
-  const table = document.getElementById('schedTable');\
-  let cellEntries = \{\};\
-  function key(d,t)\{ return d+'|'+t; \}\
-  function pushEntry(d,t,entry)\{ const k=key(d,t); if(!cellEntries[k]) cellEntries[k]=[]; cellEntries[k].push(entry); \}\
-\
-  members.forEach(m=>\{\
-    (m.schedule||[]).forEach(slot=>\{\
-      if(currentInstructorFilter!=='all' && slot.instructorId!==currentInstructorFilter) return;\
-      const nextStr = fmtDate(nextOccurrence(slot.day, slot.time, now));\
-      const hasMove = slot.override && slot.override.active && slot.override.forOccDate === nextStr;\
-      const isFrozenNow = m.frozenUntil && todayStr() <= m.frozenUntil;\
-      pushEntry(slot.day, slot.time, \{memberId:m.id, memberName:m.name, type:m.type, instructorId:slot.instructorId, slotId:slot.id, frozen:isFrozenNow, moved:hasMove\});\
-      if(hasMove)\{\
-        pushEntry(slot.override.day, slot.override.time, \{memberId:m.id, memberName:m.name, type:m.type, instructorId:slot.instructorId, slotId:slot.id, frozen:isFrozenNow, virtual:true\});\
-      \}\
-    \});\
-  \});\
-\
-  let thead = '<thead><tr><th>Saat</th>'+DAY_ORDER.map(d=>`<th>$\{d\}</th>`).join('')+'</tr></thead>';\
-  let tbody = '<tbody>';\
-  times.forEach(t=>\{\
-    tbody += `<tr><td class="time-cell">$\{t\}</td>`;\
-    DAY_ORDER.forEach(day=>\{\
-      const entries = cellEntries[key(day,t)] || [];\
-      tbody += `<td class="slot-cell">`;\
-      entries.forEach(e=>\{\
-        const cls = e.frozen ? 'frozen' : (e.moved ? 'moved' : (e.virtual ? 'virtual' : ''));\
-        const clickAttr = e.virtual ? `onclick="openVirtualCancel('$\{e.memberId\}','$\{e.slotId\}')"` : `onclick="openEntryAction('$\{e.memberId\}','$\{e.slotId\}')"`;\
-        const tag = e.virtual ? ' (tek seferlik)' : (e.moved ? ' (ta\uc0\u351 \u305 nd\u305 )' : '');\
-        tbody += `<div class="cell-entry $\{cls\}" $\{clickAttr\}>\
-          <div class="en-name">$\{escapeHtml(e.memberName)\}$\{tag\}</div>\
-          <div class="en-meta">$\{escapeHtml(e.type)\}$\{currentInstructorFilter==='all'?' \'b7 '+escapeHtml(getInstructorName(e.instructorId)):''\}</div>\
-        </div>`;\
-      \});\
-      tbody += `</td>`;\
-    \});\
-    tbody += `</tr>`;\
-  \});\
-  tbody += '</tbody>';\
-  table.innerHTML = thead+tbody;\
-\}\
-\
-/* ---------- H\'dcCRE AKS\uc0\u304 YON MEN\'dcS\'dc (Dondur / De\u287 i\u351 iklik / Erteleme) ---------- */\
-function openEntryAction(memberId, slotId)\{\
-  const m = members.find(x=>x.id===memberId);\
-  if(!m) return;\
-  const slot = (m.schedule||[]).find(s=>s.id===slotId);\
-  if(!slot) return;\
-  eaContext = \{memberId, slotId\};\
-  document.getElementById('entryActionTitle').textContent = m.name;\
-  document.getElementById('entryActionSub').textContent = `$\{slot.day\} $\{slot.time\} \'b7 $\{getInstructorName(slot.instructorId)\}`;\
-  document.getElementById('entryActionMenu').style.display = 'block';\
-  document.getElementById('entryChangeForm').style.display = 'none';\
-  openPanel('entryActionPanel');\
-\}\
-document.getElementById('entryActionCloseBtn').addEventListener('click', closeAllPanels);\
-document.getElementById('eaFreezeBtn').addEventListener('click', ()=>\{\
-  const ctx = eaContext; closeAllPanels(); if(ctx) openFreezePanelFor(ctx.memberId);\
-\});\
-document.getElementById('eaPostponeBtn').addEventListener('click', async ()=>\{\
-  if(!eaContext) return;\
-  const m = members.find(x=>x.id===eaContext.memberId);\
-  const slot = m && (m.schedule||[]).find(s=>s.id===eaContext.slotId);\
-  if(!slot) return;\
-  const now = new Date();\
-  const nextStr = fmtDate(nextOccurrence(slot.day, slot.time, now));\
-  slot.lastDeductedDate = (slot.lastDeductedDate === nextStr) ? '' : nextStr;\
-  await saveMembers();\
-  closeAllPanels();\
-  renderScheduleGrid();\
-\});\
-document.getElementById('eaChangeBtn').addEventListener('click', ()=>\{\
-  document.getElementById('entryActionMenu').style.display = 'none';\
-  const sel = document.getElementById('ea-new-day');\
-  sel.innerHTML = DAY_ORDER.map(d=>`<option>$\{d\}</option>`).join('');\
-  document.getElementById('ea-new-time').value = '10:00';\
-  document.getElementById('entryChangeForm').style.display = 'block';\
-\});\
-document.getElementById('eaChangeCancel').addEventListener('click', closeAllPanels);\
-document.getElementById('eaChangeConfirm').addEventListener('click', async ()=>\{\
-  if(!eaContext) return;\
-  const m = members.find(x=>x.id===eaContext.memberId);\
-  const slot = m && (m.schedule||[]).find(s=>s.id===eaContext.slotId);\
-  if(!slot) return;\
-  const newDay = document.getElementById('ea-new-day').value;\
-  const newTime = document.getElementById('ea-new-time').value || '10:00';\
-  const now = new Date();\
-  const forOccDate = fmtDate(nextOccurrence(slot.day, slot.time, now));\
-  slot.override = \{active:true, day:newDay, time:newTime, forOccDate\};\
-  await saveMembers();\
-  closeAllPanels();\
-  renderScheduleGrid();\
-\});\
-function openVirtualCancel(memberId, slotId)\{\
-  const m = members.find(x=>x.id===memberId);\
-  const slot = m && (m.schedule||[]).find(s=>s.id===slotId);\
-  if(!slot || !slot.override) return;\
-  vcContext = \{memberId, slotId\};\
-  document.getElementById('vcSub').textContent = `$\{m.name\} \'97 $\{slot.day\} $\{slot.time\} dersi bu hafta i\'e7in $\{slot.override.day\} $\{slot.override.time\} saatine ta\uc0\u351 \u305 nd\u305 .`;\
-  openPanel('virtualCancelPanel');\
-\}\
-document.getElementById('vcCloseBtn').addEventListener('click', closeAllPanels);\
-document.getElementById('vcCancelBtn').addEventListener('click', async ()=>\{\
-  if(!vcContext) return;\
-  const m = members.find(x=>x.id===vcContext.memberId);\
-  const slot = m && (m.schedule||[]).find(s=>s.id===vcContext.slotId);\
-  if(slot && slot.override) slot.override.active = false;\
-  await saveMembers();\
-  closeAllPanels();\
-  renderScheduleGrid();\
-\});\
-\
-/* ---------- ARKA PLAN M\'dcSA\uc0\u304 TL\u304 K S\u304 STEM\u304  (2 oda / st\'fcdyo kapasitesi) ---------- */\
-function busyInstructorsForDateTime(dateStr, time, excludeDemoId)\{\
-  const dayName = JS_DOW[new Date(dateStr+'T00:00:00').getDay()];\
-  let set = new Set();\
-  members.forEach(m=>(m.schedule||[]).forEach(s=>\{ if(s.day===dayName && s.time===time) set.add(s.instructorId); \}));\
-  demos.forEach(d=>\{ if(d.id===excludeDemoId) return; if(d.status==='pending' && d.date===dateStr && d.time===time) set.add(d.instructorId); \});\
-  return set;\
-\}\
-function busyInstructorsForWeekday(dayName, time)\{\
-  let set = new Set();\
-  members.forEach(m=>(m.schedule||[]).forEach(s=>\{ if(s.day===dayName && s.time===time) set.add(s.instructorId); \}));\
-  return set;\
-\}\
-function isDemoSlotAvailable(dateStr, time, instructorId, excludeDemoId)\{\
-  const busy = busyInstructorsForDateTime(dateStr, time, excludeDemoId);\
-  if(busy.has(instructorId)) return false;\
-  return busy.size < STUDIO_ROOMS;\
-\}\
-\
-/* ---------- DEMO SEANS (EXCEL TABLOSU) ---------- */\
-function refreshDemoTimeOptions(preferredTime)\{\
-  const date = document.getElementById('d-date').value;\
-  const instructorId = document.getElementById('d-instructor').value;\
-  const sel = document.getElementById('d-time');\
-  if(!date || !instructorId)\{ sel.innerHTML=''; return; \}\
-  const times = getAllTimeSlots();\
-  const avail = times.filter(t=> isDemoSlotAvailable(date, t, instructorId, null));\
-  if(avail.length===0)\{ sel.innerHTML = '<option value="">Uygun saat yok</option>'; return; \}\
-  sel.innerHTML = avail.map(t=>`<option value="$\{t\}" $\{t===preferredTime?'selected':''\}>$\{t\}</option>`).join('');\
-\}\
-document.getElementById('d-date').addEventListener('change', ()=>refreshDemoTimeOptions());\
-document.getElementById('d-instructor').addEventListener('change', ()=>refreshDemoTimeOptions());\
-\
-document.getElementById('hocaDemoAddBtn').addEventListener('click', ()=>\{\
-  document.getElementById('d-name').value = '';\
-  document.getElementById('d-phone').value = '';\
-  document.getElementById('d-date').value = todayStr();\
-  document.getElementById('d-instructor').innerHTML = instructors.map(i=>`<option value="$\{i.id\}">$\{escapeHtml(i.name)\}</option>`).join('');\
-  refreshDemoTimeOptions();\
-  openPanel('demoAddPanel');\
-\});\
-document.getElementById('demoCancelBtn').addEventListener('click', closeAllPanels);\
-document.getElementById('demoSaveBtn').addEventListener('click', async ()=>\{\
-  const name = document.getElementById('d-name').value.trim();\
-  const phone = document.getElementById('d-phone').value.trim();\
-  const date = document.getElementById('d-date').value;\
-  const time = document.getElementById('d-time').value;\
-  const instructorId = document.getElementById('d-instructor').value;\
-  if(!name)\{ alert('L\'fctfen isim girin.'); return; \}\
-  if(!date)\{ alert('L\'fctfen tarih girin.'); return; \}\
-  if(!time)\{ alert('Bu hoca ve tarih i\'e7in uygun saat bulunmuyor.'); return; \}\
-  if(!isDemoSlotAvailable(date, time, instructorId, null))\{\
-    alert('Bu saat art\uc0\u305 k uygun de\u287 il, l\'fctfen tekrar se\'e7in.');\
-    refreshDemoTimeOptions();\
-    return;\
-  \}\
-  demos.push(\{id: uid('d'), name, phone, date, time, instructorId, status:'pending'\});\
-  await saveDemos();\
-  closeAllPanels();\
-  if(currentTab==='demoSchedule') renderDemoGrid();\
-\});\
-\
-function openDemoAddFromCell(day, time)\{\
-  const instructorId = currentDemoInstructorFilter!=='all' ? currentDemoInstructorFilter : (instructors[0]?instructors[0].id:null);\
-  document.getElementById('d-name').value = '';\
-  document.getElementById('d-phone').value = '';\
-  const date = fmtDate(nextOccurrence(day, time, new Date()));\
-  document.getElementById('d-date').value = date;\
-  document.getElementById('d-instructor').innerHTML = instructors.map(i=>`<option value="$\{i.id\}" $\{i.id===instructorId?'selected':''\}>$\{escapeHtml(i.name)\}</option>`).join('');\
-  refreshDemoTimeOptions(time);\
-  openPanel('demoAddPanel');\
-\}\
-\
-function renderDemoGrid()\{\
-  const times = getAllTimeSlots();\
-  const table = document.getElementById('demoTable');\
-  let cellEntries = \{\};\
-  function key(d,t)\{ return d+'|'+t; \}\
-  demos.forEach(d=>\{\
-    if(currentDemoInstructorFilter!=='all' && d.instructorId!==currentDemoInstructorFilter) return;\
-    const dayName = JS_DOW[new Date(d.date+'T00:00:00').getDay()];\
-    const k = key(dayName, d.time);\
-    if(!cellEntries[k]) cellEntries[k]=[];\
-    cellEntries[k].push(d);\
-  \});\
-\
-  let thead = '<thead><tr><th>Saat</th>'+DAY_ORDER.map(d=>`<th>$\{d\}</th>`).join('')+'</tr></thead>';\
-  let tbody = '<tbody>';\
-  times.forEach(t=>\{\
-    tbody += `<tr><td class="time-cell">$\{t\}</td>`;\
-    DAY_ORDER.forEach(day=>\{\
-      const busy = busyInstructorsForWeekday(day, t);\
-      const isFull = busy.size >= STUDIO_ROOMS;\
-      const entries = cellEntries[key(day,t)] || [];\
-      const cellCls = isFull ? 'cell-full' : '';\
-      if(entries.length===0)\{\
-        if(!isFull)\{\
-          tbody += `<td class="slot-cell $\{cellCls\}" style="cursor:pointer;" onclick="openDemoAddFromCell('$\{day\}','$\{t\}')"></td>`;\
-        \} else \{\
-          tbody += `<td class="slot-cell $\{cellCls\}"></td>`;\
-        \}\
-      \} else \{\
-        tbody += `<td class="slot-cell $\{cellCls\}">`;\
-        entries.forEach(d=>\{\
-          const extraCls = d.status==='rejected' ? 'moved' : (d.status==='converted' ? 'virtual' : '');\
-          const statusTag = d.status==='converted' ? ' \uc0\u10003  \'fcye' : (d.status==='rejected' ? ' \'b7 red' : '');\
-          const dateLabel = d.date.slice(8,10)+'.'+d.date.slice(5,7);\
-          const clickAttr = d.status==='pending' ? `onclick="openDemoCellAction('$\{d.id\}')" style="cursor:pointer;"` : 'style="cursor:default;"';\
-          tbody += `<div class="cell-entry $\{extraCls\}" $\{clickAttr\}>\
-            <div class="en-name">$\{escapeHtml(d.name)\}$\{statusTag\}</div>\
-            <div class="en-meta">$\{dateLabel\} \'b7 $\{escapeHtml(getInstructorName(d.instructorId))\}</div>\
-          </div>`;\
-        \});\
-        tbody += `</td>`;\
-      \}\
-    \});\
-    tbody += `</tr>`;\
-  \});\
-  tbody += '</tbody>';\
-  table.innerHTML = thead+tbody;\
-\}\
-\
-function openDemoCellAction(demoId)\{\
-  const d = demos.find(x=>x.id===demoId);\
-  if(!d) return;\
-  demoCellContextId = demoId;\
-  document.getElementById('demoCellActionTitle').textContent = d.name;\
-  document.getElementById('demoCellActionSub').textContent = `$\{d.date\} \'b7 $\{d.time\} \'b7 $\{getInstructorName(d.instructorId)\}`;\
-  openPanel('demoCellActionPanel');\
-\}\
-document.getElementById('demoCellAddBtn').addEventListener('click', ()=>\{ const id=demoCellContextId; closeAllPanels(); if(id) convertDemo(id); \});\
-document.getElementById('demoCellRejectBtn').addEventListener('click', async ()=>\{ const id=demoCellContextId; closeAllPanels(); if(id) await rejectDemo(id); \});\
-document.getElementById('demoCellCloseBtn').addEventListener('click', closeAllPanels);\
-\
-function convertDemo(demoId)\{\
-  const d = demos.find(x=>x.id===demoId);\
-  if(!d) return;\
-  openFreshMemberPanel(\{name:d.name, phone:d.phone, instructorId:d.instructorId, slotCount:2, demoId:d.id\});\
-\}\
-async function rejectDemo(demoId)\{\
-  const d = demos.find(x=>x.id===demoId);\
-  if(!d) return;\
-  d.status = 'rejected';\
-  await saveDemos();\
-  renderDemoGrid();\
-\}\
-\
-initRole();\
-</script>\
-</body>\
-</html>}
+  header.top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:20px;gap:20px;flex-wrap:wrap;}
+  .studio-name{font-family:'Fraunces',serif;font-weight:600;font-size:34px;letter-spacing:-0.01em;margin:0;}
+  .studio-sub{color:var(--ink-soft);font-size:14px;margin-top:4px;}
+  .role-switch{font-size:12px;color:var(--ink-soft);text-decoration:underline;cursor:pointer;margin-top:8px;display:inline-block;}
+  .stats{display:flex;gap:14px;flex-wrap:wrap;}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 20px;text-align:center;min-width:104px;box-shadow:0 1px 3px rgba(0,0,0,0.03);}
+  .stat .num{font-family:'Fraunces',serif;font-size:24px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;}
+  .stat .num.alert{color:var(--alert);}
+  .stat .num.clay{color:var(--clay);}
+  .stat .label{font-size:11.5px;color:var(--ink-soft);margin-top:5px;}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;}
+
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:22px;}
+  .tab-btn{padding:10px 4px;margin-right:20px;background:none;border:none;font-family:'Inter',sans-serif;font-size:15px;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tab-btn.on{color:var(--ink);border-bottom-color:var(--sage);font-weight:600;}
+  .view{display:none;}
+  .view.on{display:block;}
+
+  .controls{display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;}
+  .search{flex:1;min-width:220px;padding:11px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);}
+  .search:focus{outline:2px solid var(--sage);outline-offset:1px;}
+  .filter-chip{padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink-soft);font-size:13.5px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .filter-chip.on{background:var(--sage-soft);border-color:var(--sage);color:var(--sage-dark);font-weight:600;}
+  .btn-add{padding:11px 18px;background:var(--sage);color:#fff;border:none;border-radius:8px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+  .btn-add:hover{background:var(--sage-dark);}
+  .btn-ghost{padding:9px 14px;background:transparent;border:1px solid var(--line);color:var(--ink-soft);border-radius:8px;font-size:13.5px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .btn-ghost:hover{border-color:var(--sage);color:var(--sage-dark);}
+
+  .list{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  .row{background:var(--panel);padding:16px 18px;display:grid;grid-template-columns:1.5fr 1.5fr 0.9fr 0.8fr auto;gap:14px;align-items:center;}
+  .row.head{background:transparent;padding:0 18px 8px;font-size:12px;color:var(--ink-soft);border:none;}
+  .m-name{font-weight:600;font-size:15px;}
+  .m-phone{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+  .m-pkg{font-size:14px;}
+  .m-pkg .type{color:var(--ink-soft);font-size:12.5px;margin-top:2px;}
+  .m-sched{font-size:12px;color:var(--ink-soft);margin-top:4px;line-height:1.5;}
+  .m-sched b{color:var(--ink);font-weight:600;}
+  .sessions{font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;}
+  .sessions.low{color:var(--alert);}
+  .badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:12px;font-weight:600;}
+  .badge.active{background:var(--sage-soft);color:var(--sage-dark);}
+  .badge.low{background:var(--alert-soft);color:var(--alert);}
+  .badge.done{background:#EFEDE6;color:var(--ink-soft);}
+  .badge.frozen{background:var(--alert-soft);color:var(--alert);}
+  .row-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;}
+  .icon-btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:7px 10px;font-size:12.5px;cursor:pointer;color:var(--ink);font-family:'Inter',sans-serif;}
+  .icon-btn:hover{border-color:var(--sage);color:var(--sage-dark);}
+  .icon-btn.danger:hover{border-color:var(--alert);color:var(--alert);}
+
+  .empty{text-align:center;padding:60px 20px;color:var(--ink-soft);}
+  .empty .big{font-family:'Fraunces',serif;font-size:20px;color:var(--ink);margin-bottom:6px;}
+
+  .sched-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);-webkit-overflow-scrolling:touch;}
+  table.sched-table{border-collapse:collapse;width:100%;min-width:820px;}
+  table.sched-table th, table.sched-table td{border:1px solid var(--line);padding:0;}
+  table.sched-table thead th{background:var(--sage-soft);color:var(--sage-dark);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;padding:10px 8px;text-align:center;}
+  table.sched-table thead th:first-child{text-align:left;padding-left:12px;position:sticky;left:0;z-index:3;}
+  table.sched-table td.time-cell{background:var(--bg);font-variant-numeric:tabular-nums;font-weight:600;font-size:13px;padding:10px 12px;white-space:nowrap;color:var(--ink-soft);position:sticky;left:0;z-index:2;}
+  table.sched-table td.slot-cell{min-width:112px;vertical-align:top;padding:6px;}
+  .cell-entry{padding:9px 8px;border-radius:6px;background:var(--sage-soft);margin-bottom:4px;font-size:12px;line-height:1.4;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0.08);}
+  .cell-entry:last-child{margin-bottom:0;}
+  .cell-entry .en-name{font-weight:600;color:var(--sage-dark);}
+  .cell-entry .en-meta{color:var(--ink-soft);font-size:11px;margin-top:1px;}
+  .cell-entry.frozen{background:var(--alert-soft);}
+  .cell-entry.frozen .en-name{color:var(--alert);}
+  .cell-entry.moved{background:var(--gray-soft);opacity:0.75;}
+  .cell-entry.moved .en-name{color:var(--gray);text-decoration:line-through;}
+  .cell-entry.virtual{background:var(--clay-soft);}
+  .cell-entry.virtual .en-name{color:var(--clay);}
+  table.sched-table td.cell-full{background:#3B3A34;}
+  table.sched-table td.cell-full .en-meta{color:#C9C7BE;}
+
+  .schedule-slot{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;background:var(--bg);}
+  .schedule-slot-row{display:flex;gap:6px;margin-bottom:6px;}
+  .schedule-slot-row select, .schedule-slot-row input{flex:1;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:13.5px;font-family:'Inter',sans-serif;background:#fff;color:var(--ink);}
+  .schedule-slot-remove{width:100%;text-align:center;padding:6px;}
+
+  .member-check-list{max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:6px;background:var(--bg);}
+  .member-check-item{display:flex;align-items:center;gap:8px;padding:7px 6px;font-size:14px;cursor:pointer;border-radius:6px;}
+  .member-check-item:hover{background:var(--sage-soft);}
+  .member-check-item input{width:16px;height:16px;}
+  .member-check-item.selected{background:var(--sage-soft);font-weight:600;}
+
+  .inst-mgmt-row{display:flex;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);}
+  .inst-mgmt-row input{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:14px;}
+
+  .overlay{position:fixed;inset:0;background:rgba(38,37,31,0.35);opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;}
+  .overlay.open{opacity:1;pointer-events:auto;}
+  .panel{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:92vw;background:var(--panel);box-shadow:-8px 0 30px rgba(0,0,0,0.08);transform:translateX(100%);transition:transform .25s ease;z-index:11;padding:28px 26px;overflow-y:auto;}
+  .panel.open{transform:translateX(0);}
+  .panel h2{font-family:'Fraunces',serif;font-size:22px;margin:0 0 20px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:6px;font-weight:600;}
+  .field .hint{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+  .field input, .field select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:7px;font-size:16px;font-family:'Inter',sans-serif;color:var(--ink);background:var(--bg);}
+  .field input:focus, .field select:focus{outline:2px solid var(--sage);outline-offset:1px;}
+  .panel-actions{display:flex;gap:10px;margin-top:22px;}
+  .btn-primary{flex:1;padding:12px;background:var(--sage);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14.5px;}
+  .btn-secondary{padding:12px 16px;background:transparent;color:var(--ink-soft);border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:14.5px;}
+  .paid-line{font-size:12px;color:var(--clay);margin-top:3px;}
+  .action-menu-btn{display:block;width:100%;padding:13px;margin-bottom:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);font-size:14.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;color:var(--ink);text-align:left;}
+  .action-menu-btn:hover{border-color:var(--sage);background:var(--sage-soft);color:var(--sage-dark);}
+  .action-menu-btn.reject:hover{border-color:var(--alert);background:var(--alert-soft);color:var(--alert);}
+
+  #loadingNote{position:fixed;bottom:16px;right:16px;background:var(--ink);color:#fff;padding:8px 14px;border-radius:8px;font-size:12.5px;z-index:50;opacity:0.9;}
+
+  @media (max-width:680px){
+    .row{grid-template-columns:1fr;gap:8px;}
+    .row.head{display:none;}
+    .row-actions{justify-content:flex-start;margin-top:8px;}
+    .wrap{padding:20px 14px 60px;}
+    .studio-name{font-size:26px;}
+    .stat{padding:10px 14px;min-width:88px;}
+    .stat .num{font-size:20px;}
+    .panel{padding:22px 18px;width:100%;max-width:100%;}
+    .toolbar{gap:8px;}
+    .toolbar .btn-add, .toolbar .btn-ghost{flex:1 1 auto;min-width:150px;text-align:center;}
+    .tab-btn{font-size:14px;margin-right:14px;}
+    .icon-btn{padding:9px 12px;font-size:13px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="appRoot" style="display:none;">
+
+  <header class="top">
+    <div>
+      <p class="studio-name">Stüdyo Takip</p>
+      <p class="studio-sub" id="roleLabel">—</p>
+      <span class="role-switch" id="switchRoleLink">Admin Girişi</span>
+    </div>
+    <div class="stats" id="statsRow"></div>
+  </header>
+
+  <div class="toolbar" id="hocaToolbar" style="display:none;">
+    <button class="btn-add" id="hocaDemoAddBtn">+ Üye Ekle (Demo)</button>
+    <button class="btn-ghost" id="hocaDirectAddBtn">+ Direkt Üye Ekle</button>
+    <button class="btn-ghost" id="hocaFreezeBtn">Üye Dondur</button>
+  </div>
+
+  <div class="tabs" id="tabsRow"></div>
+
+  <!-- ÜYELER -->
+  <div class="view" id="view-members">
+    <div class="controls">
+      <input class="search" id="searchInput" placeholder="İsim veya telefon ile ara..." />
+      <button class="filter-chip on" data-filter="all">Tümü</button>
+      <button class="filter-chip" data-filter="active">Aktif</button>
+      <button class="filter-chip" data-filter="low">Azalan (≤2)</button>
+      <button class="filter-chip" data-filter="done">Biten</button>
+      <button class="btn-ghost" id="openFreezeBtn">Üye Dondur</button>
+      <button class="btn-add" id="openAddBtn">+ Üye Ekle</button>
+    </div>
+    <div id="listArea"></div>
+  </div>
+
+  <!-- DERS PROGRAMI -->
+  <div class="view" id="view-schedule">
+    <div class="controls">
+      <div id="instructorTabs" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="sched-table-wrap"><table class="sched-table" id="schedTable"></table></div>
+  </div>
+
+  <!-- DEMO PROGRAMI -->
+  <div class="view" id="view-demoSchedule">
+    <div class="controls">
+      <div id="demoInstructorTabs" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="sched-table-wrap"><table class="sched-table" id="demoTable"></table></div>
+  </div>
+
+  <!-- HOCALAR (sadece sahibi) -->
+  <div class="view" id="view-instructorsMgmt">
+    <div class="controls">
+      <button class="btn-add" id="addInstructorBtn">+ Hoca Ekle</button>
+    </div>
+    <div id="instMgmtList"></div>
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- ÜYE PANELİ -->
+<div class="panel" id="panel">
+  <h2 id="panelTitle">Yeni Üye</h2>
+  <div class="field"><label>İsim Soyisim</label><input id="f-name" placeholder="Örn. Ayşe Yılmaz" /></div>
+  <div class="field"><label>Telefon</label><input id="f-phone" placeholder="0555 000 00 00" /></div>
+  <div class="field"><label>Paket Türü</label>
+    <select id="f-type"></select>
+    <div class="hint">Kontenjan: Bireysel 1, Düet 2, Grup 4 kişi. Tüm paketler 8 seans.</div>
+  </div>
+  <div class="field" id="f-fee-wrap"><label>Ücret (₺)</label><input id="f-fee" type="number" min="0" /></div>
+  <div class="field"><label>Kalan Seans</label><input id="f-remaining" type="number" min="0" max="8" placeholder="8" /></div>
+  <div class="field"><label>Başlangıç Tarihi</label><input id="f-start" type="date" /></div>
+  <div class="field">
+    <label>Haftalık Ders Programı</label>
+    <div id="f-schedule-list"></div>
+    <button type="button" class="btn-ghost" id="addScheduleSlotBtn">+ Gün/Saat Ekle</button>
+  </div>
+  <div class="field"><label>Not (opsiyonel)</label><input id="f-notes" placeholder="Sağlık notu, tercih vb." /></div>
+  <div class="field" style="display:flex;align-items:center;gap:8px;">
+    <input type="checkbox" id="f-own-member" style="width:18px;height:18px;flex:none;" />
+    <label for="f-own-member" style="margin:0;font-size:14px;color:var(--ink);font-weight:500;">Hocanın Kendi Üyesi</label>
+  </div>
+  <div class="panel-actions">
+    <button class="btn-secondary" id="cancelBtn">Vazgeç</button>
+    <button class="btn-primary" id="saveBtn">Kaydet</button>
+  </div>
+</div>
+
+<!-- ÖDEME / YENİLEME PANELİ -->
+<div class="panel" id="paymentPanel">
+  <h2>Ödeme / Paket Yenile</h2>
+  <p class="studio-sub" id="paymentForName" style="margin-bottom:18px;"></p>
+  <div class="field"><label>Paket Türü</label><select id="p-type"></select></div>
+  <div class="field"><label>Tutar (₺)</label><input id="p-amount" type="number" min="0" /></div>
+  <div class="field"><label>Tarih</label><input id="p-date" type="date" /></div>
+  <div class="field"><label>Not (opsiyonel)</label><input id="p-note" placeholder="Örn. Nakit, 8 seanslık paket" /></div>
+  <div class="hint" style="margin:-8px 0 16px;">Kaydettiğinizde kalan seans otomatik olarak 8'e ayarlanır ve paket türü güncellenir.</div>
+  <div class="panel-actions">
+    <button class="btn-secondary" id="paymentCancelBtn">Vazgeç</button>
+    <button class="btn-primary" id="paymentSaveBtn">Kaydet</button>
+  </div>
+</div>
+
+<!-- DONDURMA PANELİ -->
+<div class="panel" id="freezePanel">
+  <h2>Üye Dondur</h2>
+  <div class="field" id="fr-search-wrap"><label>Üye Ara</label><input id="fr-search" placeholder="İsim ile ara..." /></div>
+  <div class="field" id="fr-list-wrap"><label>Üye Seç</label><div class="member-check-list" id="fr-member-list"></div></div>
+  <div class="field" id="fr-current-status" style="display:none;color:var(--clay);font-size:13px;"></div>
+  <div class="field"><label>Şu tarihe kadar dondur</label><input id="fr-date" type="date" /></div>
+  <div class="panel-actions">
+    <button class="btn-secondary" id="freezeCancelBtn">Vazgeç</button>
+    <button class="btn-primary" id="freezeSaveBtn">Dondur</button>
+  </div>
+  <button class="btn-ghost" id="freezeRemoveBtn" style="width:100%;margin-top:10px;display:none;">Dondurmayı Kaldır</button>
+</div>
+
+<!-- DEMO EKLE PANELİ -->
+<div class="panel" id="demoAddPanel">
+  <h2>Demo Seans Ekle</h2>
+  <div class="field"><label>İsim Soyisim</label><input id="d-name" placeholder="Örn. Ayşe Yılmaz" /></div>
+  <div class="field"><label>Telefon</label><input id="d-phone" placeholder="0555 000 00 00" /></div>
+  <div class="field"><label>Demo Tarihi</label><input id="d-date" type="date" /></div>
+  <div class="field"><label>Hoca</label><select id="d-instructor"></select></div>
+  <div class="field"><label>Demo Saati</label><select id="d-time"></select>
+    <div class="hint">Sadece bu hocanın ve stüdyonun boş olduğu saatler listelenir (09.00–22.00).</div>
+  </div>
+  <div class="panel-actions">
+    <button class="btn-secondary" id="demoCancelBtn">Vazgeç</button>
+    <button class="btn-primary" id="demoSaveBtn">Kaydet</button>
+  </div>
+</div>
+
+<!-- ADMIN GİRİŞİ -->
+<div class="panel" id="adminLoginPanel">
+  <h2>Admin Girişi</h2>
+  <div class="field"><label>Şifre</label><input id="admin-pass" type="password" placeholder="••••••••" /></div>
+  <div class="panel-actions">
+    <button class="btn-secondary" id="adminCancelBtn">Vazgeç</button>
+    <button class="btn-primary" id="adminLoginBtn">Giriş Yap</button>
+  </div>
+</div>
+
+<!-- DEMO HÜCRE AKSİYONU -->
+<div class="panel" id="demoCellActionPanel">
+  <h2 id="demoCellActionTitle">Demo Seans</h2>
+  <p class="studio-sub" id="demoCellActionSub" style="margin-bottom:20px;"></p>
+  <button class="action-menu-btn" id="demoCellAddBtn">✅ Üye Ekle</button>
+  <button class="action-menu-btn reject" id="demoCellRejectBtn">❌ Red</button>
+  <div class="panel-actions"><button class="btn-secondary" style="flex:1;" id="demoCellCloseBtn">Kapat</button></div>
+</div>
+
+<!-- IZGARA HÜCRE AKSİYON PANELİ (Dondur / Değişiklik / Erteleme) -->
+<div class="panel" id="entryActionPanel">
+  <h2 id="entryActionTitle">İşlem Seç</h2>
+  <p class="studio-sub" id="entryActionSub" style="margin-bottom:20px;"></p>
+  <div id="entryActionMenu">
+    <button class="action-menu-btn" id="eaFreezeBtn">❄️ Dondur</button>
+    <button class="action-menu-btn" id="eaChangeBtn">🔁 Değişiklik (bu hafta)</button>
+    <button class="action-menu-btn" id="eaPostponeBtn">⏭️ Erteleme (bu hafta atla)</button>
+  </div>
+  <div id="entryChangeForm" style="display:none;">
+    <div class="field"><label>Yeni Gün</label><select id="ea-new-day"></select></div>
+    <div class="field"><label>Yeni Saat</label><input id="ea-new-time" type="time" /></div>
+    <div class="panel-actions">
+      <button class="btn-secondary" id="eaChangeCancel">Vazgeç</button>
+      <button class="btn-primary" id="eaChangeConfirm">Onayla</button>
+    </div>
+  </div>
+  <div class="panel-actions" id="entryActionClose">
+    <button class="btn-secondary" style="flex:1;" id="entryActionCloseBtn">Kapat</button>
+  </div>
+</div>
+
+<!-- SANAL (TAŞINAN) GİRDİ İPTAL PANELİ -->
+<div class="panel" id="virtualCancelPanel">
+  <h2>Tek Seferlik Değişiklik</h2>
+  <p class="studio-sub" id="vcSub" style="margin-bottom:20px;"></p>
+  <div class="panel-actions">
+    <button class="btn-secondary" id="vcCloseBtn">Kapat</button>
+    <button class="btn-primary" id="vcCancelBtn" style="background:var(--alert);">Değişikliği İptal Et</button>
+  </div>
+</div>
+
+<div id="loadingNote" style="display:none;">Kaydediliyor...</div>
+
+<script>
+/* =========================================================
+   SUPABASE AYARLARI — Kendi bilgilerinizi buraya yapıştırın
+   ========================================================= */
+const SUPABASE_URL = 'https://vuivpmqukfzsbpqsylbr.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_xKiAHFG6sonCiC6InJG6Iw_gLCrBV6s';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/* ========================================================= */
+
+const PACKAGE_TOTAL = 8;
+const ADMIN_PASSWORD = '23Umut.Mirza';
+const STUDIO_ROOMS = 2;
+const PACKAGES = [
+  {name:'Bireysel Reformer', price:11000, capacity:1},
+  {name:'Düet Reformer (Altın)', price:6500, capacity:2},
+  {name:'Düet Reformer', price:7500, capacity:2},
+  {name:'Grup Reformer', price:5000, capacity:4},
+  {name:'Grup Reformer (Altın)', price:4000, capacity:4},
+];
+const PRICE_MAP = {}; const CAPACITY = {};
+PACKAGES.forEach(p=>{ PRICE_MAP[p.name]=p.price; CAPACITY[p.name]=p.capacity; });
+function packageOptionsHtml(selected){
+  return PACKAGES.map(p=>`<option value="${escapeHtml(p.name)}" ${p.name===selected?'selected':''}>${escapeHtml(p.name)} — ${p.price.toLocaleString('tr-TR')}₺</option>`).join('');
+}
+
+const DAY_ORDER = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+const JS_DOW = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+
+let role = 'hoca';
+let members = [];
+let instructors = [];
+let demos = [];
+let editingId = null;
+let paymentForId = null;
+let convertingDemoId = null;
+let selectedFreezeMemberId = null;
+let currentFilter = 'all';
+let searchTerm = '';
+let currentInstructorFilter = 'all';
+let currentDemoInstructorFilter = 'all';
+let currentTab = null;
+let eaContext = null;
+let vcContext = null;
+let demoCellContextId = null;
+
+const listArea = document.getElementById('listArea');
+const overlay = document.getElementById('overlay');
+const ALL_PANEL_IDS = ['panel','paymentPanel','freezePanel','demoAddPanel','entryActionPanel','virtualCancelPanel','adminLoginPanel','demoCellActionPanel'];
+const panels = ALL_PANEL_IDS.map(id=>document.getElementById(id));
+
+function uid(prefix){ return prefix+'_'+Date.now()+'_'+Math.floor(Math.random()*1000); }
+function escapeHtml(str){ const d=document.createElement('div'); d.textContent = str||''; return d.innerHTML; }
+function todayStr(){ return fmtDate(new Date()); }
+function fmtDate(d){ const y=d.getFullYear(), mo=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return `${y}-${mo}-${da}`; }
+function mondayOf(d){ const dow=(d.getDay()+6)%7; const m=new Date(d); m.setDate(d.getDate()-dow); m.setHours(0,0,0,0); return m; }
+function dateForDayInWeek(refDate, targetDayName){ const mon=mondayOf(refDate); const idx=DAY_ORDER.indexOf(targetDayName); const d=new Date(mon); d.setDate(mon.getDate()+idx); return d; }
+function getInstructorName(id){ const f = instructors.find(i=>i.id===id); return f ? f.name : '—'; }
+function showSaving(v){ document.getElementById('loadingNote').style.display = v ? 'block' : 'none'; }
+
+/* =========================================================
+   SUPABASE OKUMA / YAZMA — "studio_data" tablosu üzerinden
+   ========================================================= */
+async function supaGet(key){
+  const { data, error } = await supabaseClient.from('studio_data').select('value').eq('key', key).maybeSingle();
+  if(error){ console.error('Supabase okuma hatası ('+key+'):', error); return null; }
+  return data ? data.value : null;
+}
+async function supaSet(key, valueStr){
+  showSaving(true);
+  const { error } = await supabaseClient.from('studio_data').upsert({ key: key, value: valueStr, updated_at: new Date().toISOString() });
+  showSaving(false);
+  if(error){ console.error('Supabase yazma hatası ('+key+'):', error); alert('Kaydedilirken bir sorun oluştu. İnternet bağlantınızı ve Supabase ayarlarınızı kontrol edin.'); }
+}
+
+/* ---------- ROL / ADMİN (cihaza özel — localStorage) ---------- */
+function initRole(){
+  role = localStorage.getItem('studio_role') || 'hoca';
+  showApp();
+}
+function setRole(r){
+  role = r;
+  localStorage.setItem('studio_role', r);
+  showApp();
+}
+document.getElementById('switchRoleLink').addEventListener('click', ()=>{
+  if(role==='sahibi'){
+    if(confirm('Hoca ekranına dönmek istediğinize emin misiniz?')) setRole('hoca');
+  } else {
+    document.getElementById('admin-pass').value = '';
+    openPanel('adminLoginPanel');
+  }
+});
+document.getElementById('adminCancelBtn').addEventListener('click', closeAllPanels);
+document.getElementById('adminLoginBtn').addEventListener('click', ()=>{
+  const pass = document.getElementById('admin-pass').value;
+  if(pass === ADMIN_PASSWORD){ closeAllPanels(); setRole('sahibi'); }
+  else { alert('Hatalı şifre.'); }
+});
+
+function showApp(){
+  document.getElementById('appRoot').style.display='block';
+  document.getElementById('roleLabel').textContent = role==='hoca' ? 'Hoca Ekranı' : 'Stüdyo Sahibi Ekranı';
+  document.getElementById('switchRoleLink').textContent = role==='hoca' ? 'Admin Girişi' : 'Hoca Ekranına Dön';
+  document.getElementById('hocaToolbar').style.display = role==='hoca' ? 'flex' : 'none';
+  buildTabs();
+  loadAll();
+}
+
+/* ---------- SEKMELER ---------- */
+function buildTabs(){
+  const tabs = role==='hoca'
+    ? [{id:'schedule',label:'Ders Programı'},{id:'demoSchedule',label:'Demo Programı'},{id:'members',label:'Üyeler'}]
+    : [{id:'members',label:'Üyeler'},{id:'schedule',label:'Ders Programı'},{id:'demoSchedule',label:'Demo Programı'},{id:'instructorsMgmt',label:'Hocalar'}];
+  const wrap = document.getElementById('tabsRow');
+  wrap.innerHTML = tabs.map((t,i)=>`<button class="tab-btn ${i===0?'on':''}" data-view="${t.id}">${t.label}</button>`).join('');
+  currentTab = tabs[0].id;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('view-'+currentTab).classList.add('on');
+  wrap.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      wrap.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      currentTab = btn.dataset.view;
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+      document.getElementById('view-'+currentTab).classList.add('on');
+      if(currentTab==='schedule') renderScheduleGrid();
+      if(currentTab==='demoSchedule') renderDemoGrid();
+      if(currentTab==='instructorsMgmt') renderInstructorMgmt();
+      if(currentTab==='members') render();
+    });
+  });
+}
+
+/* ---------- VERİ YÜKLEME ---------- */
+async function loadAll(){
+  try{ members = JSON.parse(await supaGet('members') || '[]'); }catch(e){ members = []; }
+  members.forEach(m=>{ if(!m.schedule) m.schedule=[]; if(!m.payments) m.payments=[]; });
+
+  let instRaw = null;
+  try{ instRaw = JSON.parse(await supaGet('instructors') || 'null'); }catch(e){ instRaw = null; }
+  if(!instRaw || instRaw.length===0){
+    instructors = [{id:uid('i'),name:'Hoca 1'},{id:uid('i'),name:'Hoca 2'},{id:uid('i'),name:'Hoca 3'}];
+    await saveInstructors();
+  } else { instructors = instRaw; }
+
+  try{ demos = JSON.parse(await supaGet('demos') || '[]'); }catch(e){ demos = []; }
+
+  processSchedules();
+  renderStats();
+  renderInstructorTabs();
+  renderDemoInstructorTabs();
+  if(currentTab==='members') render();
+  if(currentTab==='schedule') renderScheduleGrid();
+  if(currentTab==='demoSchedule') renderDemoGrid();
+  if(currentTab==='instructorsMgmt') renderInstructorMgmt();
+}
+async function saveMembers(){ await supaSet('members', JSON.stringify(members)); }
+async function saveInstructors(){ await supaSet('instructors', JSON.stringify(instructors)); }
+async function saveDemos(){ await supaSet('demos', JSON.stringify(demos)); }
+
+/* ---------- OTOMATİK SEANS DÜŞME + TEK SEFERLİK DEĞİŞİKLİK ---------- */
+function mostRecentOccurrence(dayName, timeStr, now){
+  const targetDow = JS_DOW.indexOf(dayName);
+  const [hh,mm] = (timeStr||'00:00').split(':').map(Number);
+  let d = new Date(now);
+  d.setHours(hh||0, mm||0, 0, 0);
+  let diff = (d.getDay() - targetDow + 7) % 7;
+  d.setDate(d.getDate() - diff);
+  if(d > now){ d.setDate(d.getDate()-7); }
+  return d;
+}
+function nextOccurrence(dayName, timeStr, now){ const d = mostRecentOccurrence(dayName, timeStr, now); d.setDate(d.getDate()+7); return d; }
+
+function processSchedules(){
+  const now = new Date();
+  let changed = false;
+  members.forEach(m=>{
+    (m.schedule||[]).forEach(slot=>{
+      const occ = mostRecentOccurrence(slot.day, slot.time, now);
+      const occStr = fmtDate(occ);
+      const hasActiveOverrideForThisOcc = slot.override && slot.override.active && slot.override.forOccDate === occStr;
+      if(!hasActiveOverrideForThisOcc && occStr > (slot.lastDeductedDate || '')){
+        const isFrozen = m.frozenUntil && occStr <= m.frozenUntil;
+        if(!isFrozen && m.remaining>0) m.remaining -= 1;
+        slot.lastDeductedDate = occStr;
+        changed = true;
+      }
+      if(slot.override && slot.override.active){
+        const targetDate = dateForDayInWeek(new Date(slot.override.forOccDate+'T00:00:00'), slot.override.day);
+        const [hh,mm] = (slot.override.time||'00:00').split(':').map(Number);
+        targetDate.setHours(hh||0, mm||0, 0, 0);
+        if(targetDate <= now){
+          const isFrozen = m.frozenUntil && slot.override.forOccDate <= m.frozenUntil;
+          if(!isFrozen && m.remaining>0) m.remaining -= 1;
+          slot.lastDeductedDate = slot.override.forOccDate;
+          slot.override.active = false;
+          changed = true;
+        }
+      }
+    });
+  });
+  if(changed) saveMembers();
+}
+setInterval(async ()=>{ processSchedules(); renderStats(); if(currentTab==='schedule') renderScheduleGrid(); if(currentTab==='members') render(); }, 30000);
+
+/* ---------- İSTATİSTİKLER ---------- */
+function statusOf(m){ if(m.remaining<=0) return 'done'; if(m.remaining<=2) return 'low'; return 'active'; }
+function totalPaid(m){ return (m.payments||[]).reduce((s,p)=>s+Number(p.amount||0),0); }
+function scheduleSummary(m){
+  return (m.schedule||[]).map(s=>`<b>${s.day} ${s.time}</b> · ${escapeHtml(getInstructorName(s.instructorId))}`).join('<br>') || '<span style="color:var(--ink-soft)">Program yok</span>';
+}
+
+function renderStats(){
+  const wrap = document.getElementById('statsRow');
+  const total = members.length;
+  const active = members.filter(m=>statusOf(m)==='active').length;
+  const low = members.filter(m=>statusOf(m)==='low').length;
+  const frozen = members.filter(m=>m.frozenUntil && todayStr()<=m.frozenUntil).length;
+  const nowMonth = todayStr().slice(0,7);
+  let monthRevenue = 0;
+  members.forEach(m=>(m.payments||[]).forEach(p=>{ if((p.date||'').slice(0,7)===nowMonth) monthRevenue += Number(p.amount||0); }));
+
+  let html = `
+    <div class="stat"><div class="num">${total}</div><div class="label">Toplam üye</div></div>
+    <div class="stat"><div class="num">${active}</div><div class="label">Aktif üye</div></div>
+    <div class="stat"><div class="num alert">${low}</div><div class="label">Azalan paket</div></div>
+    <div class="stat"><div class="num alert">${frozen}</div><div class="label">Donduruldu</div></div>`;
+  if(role==='sahibi'){
+    html += `<div class="stat"><div class="num clay">${monthRevenue.toLocaleString('tr-TR')}₺</div><div class="label">Bu ay gelir</div></div>`;
+  }
+  wrap.innerHTML = html;
+}
+
+/* ---------- ÜYELER ---------- */
+function render(){
+  renderStats();
+  let filtered = members.filter(m=>{
+    const matchesSearch = !searchTerm || m.name.toLowerCase().includes(searchTerm) || (m.phone||'').includes(searchTerm);
+    const st = statusOf(m);
+    const matchesFilter = currentFilter==='all' || st===currentFilter;
+    return matchesSearch && matchesFilter;
+  });
+
+  if(members.length===0){
+    listArea.innerHTML = '<div class="empty"><div class="big">Henüz üye yok</div>"+ Üye Ekle" ile ilk üyenizi kaydedin.</div>';
+    return;
+  }
+  if(filtered.length===0){
+    listArea.innerHTML = '<div class="empty"><div class="big">Sonuç bulunamadı</div>Arama veya filtreyi değiştirin.</div>';
+    return;
+  }
+
+  let html = '<div class="list"><div class="row head"><div>Üye</div><div>Paket / Program</div><div>Kalan Seans</div><div>Durum</div><div></div></div>';
+  filtered.forEach(m=>{
+    const st = statusOf(m);
+    const badgeText = st==='active' ? 'Aktif' : st==='low' ? 'Azalıyor' : 'Bitti';
+    const paid = totalPaid(m);
+    const isFrozenNow = m.frozenUntil && todayStr() <= m.frozenUntil;
+    html += `
+    <div class="row">
+      <div><div class="m-name">${escapeHtml(m.name)}</div><div class="m-phone">${escapeHtml(m.phone||'')}</div></div>
+      <div class="m-pkg">${escapeHtml(m.type)}
+        <div class="m-sched">${scheduleSummary(m)}</div>
+        ${paid>0?'<div class="paid-line">Ödenen: '+paid.toLocaleString('tr-TR')+'₺</div>':''}
+      </div>
+      <div class="sessions ${st==='low'||st==='done'?'low':''}">${m.remaining} / ${PACKAGE_TOTAL}</div>
+      <div>
+        <span class="badge ${st}">${badgeText}</span>
+        ${isFrozenNow?`<div class="badge frozen" style="margin-top:5px;">Donduruldu · ${m.frozenUntil}</div>`:''}
+        ${m.isOwnMember?`<div class="badge active" style="margin-top:5px;">Kendi Üyesi</div>`:''}
+      </div>
+      <div class="row-actions">
+        <button class="icon-btn" onclick="openPayment('${m.id}')">Ödeme Ekle</button>
+        <button class="icon-btn" onclick="openEdit('${m.id}')">Düzenle</button>
+        <button class="icon-btn danger" onclick="deleteMember('${m.id}')">Sil</button>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  listArea.innerHTML = html;
+}
+
+async function deleteMember(id){
+  if(!confirm('Bu üyeyi silmek istediğinize emin misiniz?')) return;
+  members = members.filter(x=>x.id!==id);
+  await saveMembers();
+  render(); renderScheduleGrid();
+}
+
+/* ---------- ÜYE PANELİ / HAFTALIK PROGRAM ---------- */
+function addSlotRow(slot){
+  slot = slot || {id: uid('s'), day:'Pazartesi', time:'10:00', instructorId:(instructors[0]?instructors[0].id:null), lastDeductedDate:''};
+  const wrap = document.createElement('div');
+  wrap.className = 'schedule-slot';
+  wrap.dataset.slotId = slot.id;
+  wrap.dataset.lastDeducted = slot.lastDeductedDate||'';
+  wrap.innerHTML = `
+    <div class="schedule-slot-row">
+      <select class="slot-day">${DAY_ORDER.map(d=>`<option ${d===slot.day?'selected':''}>${d}</option>`).join('')}</select>
+      <input type="time" class="slot-time" value="${slot.time||'10:00'}" />
+    </div>
+    <div class="schedule-slot-row">
+      <select class="slot-instructor">${instructors.map(inst=>`<option value="${inst.id}" ${inst.id===slot.instructorId?'selected':''}>${escapeHtml(inst.name)}</option>`).join('')}</select>
+    </div>
+    <button type="button" class="icon-btn danger schedule-slot-remove">Bu Programı Sil</button>
+  `;
+  wrap.querySelector('.schedule-slot-remove').addEventListener('click', ()=>wrap.remove());
+  document.getElementById('f-schedule-list').appendChild(wrap);
+}
+document.getElementById('addScheduleSlotBtn').addEventListener('click', ()=>addSlotRow());
+
+function readSlotRows(){
+  return Array.from(document.querySelectorAll('#f-schedule-list .schedule-slot')).map(wrap=>({
+    id: wrap.dataset.slotId,
+    day: wrap.querySelector('.slot-day').value,
+    time: wrap.querySelector('.slot-time').value || '10:00',
+    instructorId: wrap.querySelector('.slot-instructor').value,
+    lastDeductedDate: wrap.dataset.lastDeducted || ''
+  }));
+}
+
+function getSlotOccupants(day, time, instructorId, excludeMemberId){
+  let occupants = [];
+  members.forEach(m=>{
+    if(m.id === excludeMemberId) return;
+    (m.schedule||[]).forEach(s=>{
+      if(s.day===day && s.time===time && s.instructorId===instructorId){
+        occupants.push({memberId:m.id, memberName:m.name, type:m.type});
+      }
+    });
+  });
+  return occupants;
+}
+
+function openEdit(id){
+  const m = members.find(x=>x.id===id);
+  if(!m) return;
+  editingId = id; convertingDemoId = null;
+  document.getElementById('f-fee-wrap').style.display = 'none';
+  document.getElementById('panelTitle').textContent = 'Üyeyi Düzenle';
+  document.getElementById('f-type').innerHTML = packageOptionsHtml(m.type);
+  document.getElementById('f-name').value = m.name;
+  document.getElementById('f-phone').value = m.phone||'';
+  document.getElementById('f-remaining').value = m.remaining;
+  document.getElementById('f-start').value = m.start||'';
+  document.getElementById('f-notes').value = m.notes||'';
+  document.getElementById('f-own-member').checked = !!m.isOwnMember;
+  document.getElementById('f-schedule-list').innerHTML = '';
+  (m.schedule||[]).forEach(s=>addSlotRow(s));
+  openPanel('panel');
+}
+document.getElementById('f-type').addEventListener('change', (e)=>{ document.getElementById('f-fee').value = PRICE_MAP[e.target.value]||''; });
+
+/* ---------- PANEL YÖNETİMİ ---------- */
+function openPanel(id){ overlay.classList.add('open'); document.getElementById(id).classList.add('open'); }
+function closeAllPanels(){
+  overlay.classList.remove('open');
+  panels.forEach(p=>p.classList.remove('open'));
+  editingId = null; paymentForId = null; selectedFreezeMemberId = null; convertingDemoId = null; eaContext = null; vcContext = null; demoCellContextId = null;
+  document.getElementById('entryChangeForm').style.display='none';
+  document.getElementById('entryActionMenu').style.display='block';
+}
+overlay.addEventListener('click', closeAllPanels);
+
+function openFreshMemberPanel(prefill){
+  prefill = prefill || {};
+  editingId = null;
+  convertingDemoId = prefill.demoId || null;
+  document.getElementById('f-fee-wrap').style.display = 'block';
+  document.getElementById('panelTitle').textContent = 'Yeni Üye';
+  document.getElementById('f-type').innerHTML = packageOptionsHtml('Grup Reformer');
+  document.getElementById('f-name').value = prefill.name || '';
+  document.getElementById('f-phone').value = prefill.phone || '';
+  document.getElementById('f-fee').value = PRICE_MAP['Grup Reformer'];
+  document.getElementById('f-remaining').value = PACKAGE_TOTAL;
+  document.getElementById('f-start').value = todayStr();
+  document.getElementById('f-notes').value = '';
+  document.getElementById('f-own-member').checked = false;
+  document.getElementById('f-schedule-list').innerHTML = '';
+  const slotCount = prefill.slotCount || 1;
+  for(let i=0;i<slotCount;i++){
+    addSlotRow({id: uid('s'), day:'Pazartesi', time:'10:00', instructorId: prefill.instructorId || (instructors[0]?instructors[0].id:null), lastDeductedDate:''});
+  }
+  openPanel('panel');
+}
+document.getElementById('openAddBtn').addEventListener('click', ()=>openFreshMemberPanel());
+document.getElementById('hocaDirectAddBtn').addEventListener('click', ()=>openFreshMemberPanel());
+document.getElementById('cancelBtn').addEventListener('click', closeAllPanels);
+
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('f-name').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+  const type = document.getElementById('f-type').value;
+  const fee = parseFloat(document.getElementById('f-fee').value) || 0;
+  const remaining = document.getElementById('f-remaining').value === '' ? PACKAGE_TOTAL : parseInt(document.getElementById('f-remaining').value);
+  const start = document.getElementById('f-start').value;
+  const notes = document.getElementById('f-notes').value.trim();
+  const isOwnMember = document.getElementById('f-own-member').checked;
+  const schedule = readSlotRows();
+  if(!name){ alert('Lütfen üye ismini girin.'); return; }
+
+  for(const slot of schedule){
+    const occupants = getSlotOccupants(slot.day, slot.time, slot.instructorId, editingId);
+    const cap = CAPACITY[type] || 1;
+    const existingType = occupants.length ? occupants[0].type : null;
+    if(existingType && existingType !== type){
+      alert(`${getInstructorName(slot.instructorId)} · ${slot.day} ${slot.time} saatinde zaten "${existingType}" dersi var. Bu saate "${type}" olarak eklenemez.`);
+      return;
+    }
+    if(occupants.length + 1 > cap){
+      alert(`${getInstructorName(slot.instructorId)} · ${slot.day} ${slot.time} dersi dolu (${cap} kişilik "${type}" kontenjanı doldu).`);
+      return;
+    }
+  }
+
+  let newMemberId = null;
+  if(editingId){
+    const m = members.find(x=>x.id===editingId);
+    Object.assign(m, {name, phone, type, total: PACKAGE_TOTAL, remaining, start, notes, schedule, isOwnMember});
+  } else {
+    newMemberId = uid('m');
+    const payments = fee>0 ? [{id:uid('p'), amount:fee, date: start||todayStr(), note:'İlk kayıt ödemesi'}] : [];
+    members.push({id: newMemberId, name, phone, type, total: PACKAGE_TOTAL, remaining, start, notes, schedule, payments, isOwnMember});
+  }
+  await saveMembers();
+
+  if(convertingDemoId){
+    const demo = demos.find(d=>d.id===convertingDemoId);
+    if(demo){ demo.status='converted'; demo.memberId=newMemberId; await saveDemos(); }
+  }
+
+  closeAllPanels();
+  processSchedules();
+  renderStats();
+  if(currentTab==='members') render();
+  if(currentTab==='schedule') renderScheduleGrid();
+  if(currentTab==='demoSchedule') renderDemoGrid();
+});
+
+document.getElementById('searchInput').addEventListener('input', (e)=>{ searchTerm = e.target.value.toLowerCase(); render(); });
+document.querySelectorAll('#view-members .filter-chip').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#view-members .filter-chip').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on'); currentFilter = btn.dataset.filter; render();
+  });
+});
+
+/* ---------- ÖDEME / PAKET YENİLEME ---------- */
+function openPayment(id){
+  paymentForId = id;
+  const m = members.find(x=>x.id===id);
+  document.getElementById('paymentForName').textContent = m ? m.name : '';
+  document.getElementById('p-type').innerHTML = packageOptionsHtml(m?m.type:'Grup Reformer');
+  document.getElementById('p-amount').value = m ? (PRICE_MAP[m.type]||'') : '';
+  document.getElementById('p-date').value = todayStr();
+  document.getElementById('p-note').value = '';
+  openPanel('paymentPanel');
+}
+document.getElementById('p-type').addEventListener('change', (e)=>{ document.getElementById('p-amount').value = PRICE_MAP[e.target.value]||''; });
+document.getElementById('paymentCancelBtn').addEventListener('click', closeAllPanels);
+document.getElementById('paymentSaveBtn').addEventListener('click', async ()=>{
+  const type = document.getElementById('p-type').value;
+  const amount = parseFloat(document.getElementById('p-amount').value);
+  const date = document.getElementById('p-date').value || todayStr();
+  const note = document.getElementById('p-note').value.trim();
+  if(!amount || amount<=0){ alert('Lütfen geçerli bir tutar girin.'); return; }
+  const m = members.find(x=>x.id===paymentForId);
+  if(!m) return;
+  m.payments = m.payments || [];
+  m.payments.push({id: uid('p'), amount, date, note});
+  m.type = type;
+  m.remaining = PACKAGE_TOTAL;
+  await saveMembers();
+  closeAllPanels();
+  render(); renderScheduleGrid();
+});
+
+/* ---------- ÜYE DONDURMA ---------- */
+function renderFreezeMemberList(filterText){
+  const wrap = document.getElementById('fr-member-list');
+  const term = (filterText||'').toLowerCase();
+  const filtered = members.filter(m=>!term || m.name.toLowerCase().includes(term) || (m.phone||'').includes(term));
+  if(filtered.length===0){ wrap.innerHTML = '<div class="empty" style="padding:20px;">Üye bulunamadı</div>'; return; }
+  wrap.innerHTML = filtered.map(m=>`
+    <label class="member-check-item ${selectedFreezeMemberId===m.id?'selected':''}">
+      <input type="radio" name="fr-radio" value="${m.id}" ${selectedFreezeMemberId===m.id?'checked':''}/>
+      ${escapeHtml(m.name)} ${m.frozenUntil && todayStr()<=m.frozenUntil ? '· <span style="color:var(--alert);">donduruldu</span>' : ''}
+    </label>`).join('');
+  wrap.querySelectorAll('input[type=radio]').forEach(r=>{
+    r.addEventListener('change', ()=>{ selectedFreezeMemberId = r.value; updateFreezeStatusDisplay(); renderFreezeMemberList(document.getElementById('fr-search').value); });
+  });
+}
+function updateFreezeStatusDisplay(){
+  const m = members.find(x=>x.id===selectedFreezeMemberId);
+  const statusEl = document.getElementById('fr-current-status');
+  const removeBtn = document.getElementById('freezeRemoveBtn');
+  if(m && m.frozenUntil){
+    statusEl.style.display = 'block';
+    statusEl.textContent = `Bu üye ${m.frozenUntil} tarihine kadar donduruldu.`;
+    document.getElementById('fr-date').value = m.frozenUntil;
+    removeBtn.style.display = 'block';
+  } else {
+    statusEl.style.display = 'none';
+    document.getElementById('fr-date').value = '';
+    removeBtn.style.display = 'none';
+  }
+}
+function openFreezePanelFor(memberId){
+  selectedFreezeMemberId = memberId || null;
+  document.getElementById('fr-search').value = '';
+  if(memberId){
+    document.getElementById('fr-search-wrap').style.display='none';
+    document.getElementById('fr-list-wrap').style.display='none';
+    updateFreezeStatusDisplay();
+  } else {
+    document.getElementById('fr-search-wrap').style.display='block';
+    document.getElementById('fr-list-wrap').style.display='block';
+    document.getElementById('fr-current-status').style.display='none';
+    document.getElementById('freezeRemoveBtn').style.display='none';
+    document.getElementById('fr-date').value='';
+    renderFreezeMemberList('');
+  }
+  openPanel('freezePanel');
+}
+document.getElementById('openFreezeBtn').addEventListener('click', ()=>openFreezePanelFor(null));
+document.getElementById('hocaFreezeBtn').addEventListener('click', ()=>openFreezePanelFor(null));
+document.getElementById('fr-search').addEventListener('input', (e)=>renderFreezeMemberList(e.target.value));
+document.getElementById('freezeCancelBtn').addEventListener('click', closeAllPanels);
+document.getElementById('freezeSaveBtn').addEventListener('click', async ()=>{
+  if(!selectedFreezeMemberId){ alert('Lütfen bir üye seçin.'); return; }
+  const date = document.getElementById('fr-date').value;
+  if(!date){ alert('Lütfen bir tarih girin.'); return; }
+  const m = members.find(x=>x.id===selectedFreezeMemberId);
+  if(!m) return;
+  m.frozenUntil = date;
+  await saveMembers();
+  closeAllPanels();
+  render(); renderScheduleGrid();
+});
+document.getElementById('freezeRemoveBtn').addEventListener('click', async ()=>{
+  const m = members.find(x=>x.id===selectedFreezeMemberId);
+  if(!m) return;
+  delete m.frozenUntil;
+  await saveMembers();
+  closeAllPanels();
+  render(); renderScheduleGrid();
+});
+
+/* ---------- HOCA SEKMELERİ (Ders Programı filtre) ---------- */
+function renderInstructorTabs(){
+  const wrap = document.getElementById('instructorTabs');
+  let html = `<button class="filter-chip ${currentInstructorFilter==='all'?'on':''}" data-inst="all">Tümü</button>`;
+  instructors.forEach(inst=>{ html += `<button class="filter-chip ${currentInstructorFilter===inst.id?'on':''}" data-inst="${inst.id}">${escapeHtml(inst.name)}</button>`; });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.filter-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      wrap.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on'); currentInstructorFilter = btn.dataset.inst; renderScheduleGrid();
+    });
+  });
+}
+function renderDemoInstructorTabs(){
+  const wrap = document.getElementById('demoInstructorTabs');
+  let html = `<button class="filter-chip ${currentDemoInstructorFilter==='all'?'on':''}" data-inst="all">Tümü</button>`;
+  instructors.forEach(inst=>{ html += `<button class="filter-chip ${currentDemoInstructorFilter===inst.id?'on':''}" data-inst="${inst.id}">${escapeHtml(inst.name)}</button>`; });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.filter-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      wrap.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on'); currentDemoInstructorFilter = btn.dataset.inst; renderDemoGrid();
+    });
+  });
+}
+
+/* ---------- HOCA YÖNETİMİ (sahibi) — isim + iki prim yüzdesi ---------- */
+function renderInstructorMgmt(){
+  const wrap = document.getElementById('instMgmtList');
+  wrap.innerHTML = instructors.map(inst=>`
+    <div class="inst-mgmt-row" data-inst-id="${inst.id}" style="flex-direction:column;align-items:stretch;gap:10px;padding:14px 0;">
+      <input value="${escapeHtml(inst.name)}" class="inst-name-input" placeholder="Hoca adı" />
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;">
+          <label style="font-size:11.5px;color:var(--ink-soft);display:block;margin-bottom:4px;">Genel Prim %</label>
+          <input type="number" min="0" max="100" class="inst-prim-input" value="${inst.primPercent!=null?inst.primPercent:''}" placeholder="Örn. 30" />
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:11.5px;color:var(--ink-soft);display:block;margin-bottom:4px;">Kendi Üyesi Prim %</label>
+          <input type="number" min="0" max="100" class="inst-own-prim-input" value="${inst.ownMemberPrimPercent!=null?inst.ownMemberPrimPercent:''}" placeholder="Örn. 50" />
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="icon-btn inst-save-btn" style="flex:1;">Kaydet</button>
+        <button class="icon-btn danger inst-remove-btn" style="flex:1;">Sil</button>
+      </div>
+    </div>`).join('');
+}
+document.getElementById('instMgmtList').addEventListener('click', async (e)=>{
+  const row = e.target.closest('.inst-mgmt-row');
+  if(!row) return;
+  const id = row.dataset.instId;
+  if(e.target.classList.contains('inst-save-btn')){
+    const name = row.querySelector('.inst-name-input').value.trim();
+    const primPercent = parseFloat(row.querySelector('.inst-prim-input').value);
+    const ownPrim = parseFloat(row.querySelector('.inst-own-prim-input').value);
+    if(!name){ alert('Lütfen hoca adını girin.'); return; }
+    const inst = instructors.find(i=>i.id===id);
+    if(inst){
+      inst.name = name;
+      inst.primPercent = isNaN(primPercent) ? null : primPercent;
+      inst.ownMemberPrimPercent = isNaN(ownPrim) ? null : ownPrim;
+      await saveInstructors();
+      renderInstructorTabs(); renderDemoInstructorTabs(); renderInstructorMgmt(); render(); renderScheduleGrid();
+    }
+  } else if(e.target.classList.contains('inst-remove-btn')){
+    if(!confirm('Bu hocayı silmek istediğinize emin misiniz? Bu hocaya bağlı ders programları kalabilir.')) return;
+    instructors = instructors.filter(i=>i.id!==id);
+    await saveInstructors();
+    renderInstructorTabs(); renderDemoInstructorTabs(); renderInstructorMgmt();
+  }
+});
+document.getElementById('addInstructorBtn').addEventListener('click', async ()=>{
+  const name = prompt('Yeni hocanın adı:');
+  if(!name || !name.trim()) return;
+  instructors.push({id: uid('i'), name: name.trim(), primPercent:null, ownMemberPrimPercent:null});
+  await saveInstructors();
+  renderInstructorTabs(); renderDemoInstructorTabs(); renderInstructorMgmt();
+});
+
+/* ---------- ÇALIŞMA SAATLERİ (09:00–22:00) ---------- */
+function getAllTimeSlots(){
+  let base = [];
+  for(let h=9; h<=22; h++){ base.push(String(h).padStart(2,'0')+':00'); }
+  let used = new Set();
+  members.forEach(m=>(m.schedule||[]).forEach(s=>{ used.add(s.time); if(s.override&&s.override.active) used.add(s.override.time); }));
+  demos.forEach(d=>used.add(d.time));
+  used.forEach(t=>{ if(!base.includes(t)) base.push(t); });
+  return base.sort((a,b)=>a.localeCompare(b));
+}
+
+/* ---------- DERS PROGRAMI (EXCEL TABLOSU) ---------- */
+function renderScheduleGrid(){
+  const now = new Date();
+  const times = getAllTimeSlots();
+  const table = document.getElementById('schedTable');
+  let cellEntries = {};
+  function key(d,t){ return d+'|'+t; }
+  function pushEntry(d,t,entry){ const k=key(d,t); if(!cellEntries[k]) cellEntries[k]=[]; cellEntries[k].push(entry); }
+
+  members.forEach(m=>{
+    (m.schedule||[]).forEach(slot=>{
+      if(currentInstructorFilter!=='all' && slot.instructorId!==currentInstructorFilter) return;
+      const nextStr = fmtDate(nextOccurrence(slot.day, slot.time, now));
+      const hasMove = slot.override && slot.override.active && slot.override.forOccDate === nextStr;
+      const isFrozenNow = m.frozenUntil && todayStr() <= m.frozenUntil;
+      pushEntry(slot.day, slot.time, {memberId:m.id, memberName:m.name, type:m.type, instructorId:slot.instructorId, slotId:slot.id, frozen:isFrozenNow, moved:hasMove});
+      if(hasMove){
+        pushEntry(slot.override.day, slot.override.time, {memberId:m.id, memberName:m.name, type:m.type, instructorId:slot.instructorId, slotId:slot.id, frozen:isFrozenNow, virtual:true});
+      }
+    });
+  });
+
+  let thead = '<thead><tr><th>Saat</th>'+DAY_ORDER.map(d=>`<th>${d}</th>`).join('')+'</tr></thead>';
+  let tbody = '<tbody>';
+  times.forEach(t=>{
+    tbody += `<tr><td class="time-cell">${t}</td>`;
+    DAY_ORDER.forEach(day=>{
+      const entries = cellEntries[key(day,t)] || [];
+      tbody += `<td class="slot-cell">`;
+      entries.forEach(e=>{
+        const cls = e.frozen ? 'frozen' : (e.moved ? 'moved' : (e.virtual ? 'virtual' : ''));
+        const tag = e.virtual ? ' (tek seferlik)' : (e.moved ? ' (taşındı)' : '');
+        tbody += `<div class="cell-entry ${cls}" data-role="${e.virtual?'sched-virtual':'sched-entry'}" data-member-id="${e.memberId}" data-slot-id="${e.slotId}">
+          <div class="en-name">${escapeHtml(e.memberName)}${tag}</div>
+          <div class="en-meta">${escapeHtml(e.type)}${currentInstructorFilter==='all'?' · '+escapeHtml(getInstructorName(e.instructorId)):''}</div>
+        </div>`;
+      });
+      tbody += `</td>`;
+    });
+    tbody += `</tr>`;
+  });
+  tbody += '</tbody>';
+  table.innerHTML = thead+tbody;
+}
+
+/* ---------- HÜCRE AKSİYON MENÜSÜ (Dondur / Değişiklik / Erteleme) ---------- */
+document.getElementById('schedTable').addEventListener('click', (e)=>{
+  const virtualEntry = e.target.closest('.cell-entry[data-role="sched-virtual"]');
+  if(virtualEntry){ openVirtualCancel(virtualEntry.dataset.memberId, virtualEntry.dataset.slotId); return; }
+  const entry = e.target.closest('.cell-entry[data-role="sched-entry"]');
+  if(entry){ openEntryAction(entry.dataset.memberId, entry.dataset.slotId); return; }
+});
+function openEntryAction(memberId, slotId){
+  const m = members.find(x=>x.id===memberId);
+  if(!m) return;
+  const slot = (m.schedule||[]).find(s=>s.id===slotId);
+  if(!slot) return;
+  eaContext = {memberId, slotId};
+  document.getElementById('entryActionTitle').textContent = m.name;
+  document.getElementById('entryActionSub').textContent = `${slot.day} ${slot.time} · ${getInstructorName(slot.instructorId)}`;
+  document.getElementById('entryActionMenu').style.display = 'block';
+  document.getElementById('entryChangeForm').style.display = 'none';
+  openPanel('entryActionPanel');
+}
+document.getElementById('entryActionCloseBtn').addEventListener('click', closeAllPanels);
+document.getElementById('eaFreezeBtn').addEventListener('click', ()=>{
+  const ctx = eaContext; closeAllPanels(); if(ctx) openFreezePanelFor(ctx.memberId);
+});
+document.getElementById('eaPostponeBtn').addEventListener('click', async ()=>{
+  if(!eaContext) return;
+  const m = members.find(x=>x.id===eaContext.memberId);
+  const slot = m && (m.schedule||[]).find(s=>s.id===eaContext.slotId);
+  if(!slot) return;
+  const now = new Date();
+  const nextStr = fmtDate(nextOccurrence(slot.day, slot.time, now));
+  slot.lastDeductedDate = (slot.lastDeductedDate === nextStr) ? '' : nextStr;
+  await saveMembers();
+  closeAllPanels();
+  renderScheduleGrid();
+});
+document.getElementById('eaChangeBtn').addEventListener('click', ()=>{
+  document.getElementById('entryActionMenu').style.display = 'none';
+  const sel = document.getElementById('ea-new-day');
+  sel.innerHTML = DAY_ORDER.map(d=>`<option>${d}</option>`).join('');
+  document.getElementById('ea-new-time').value = '10:00';
+  document.getElementById('entryChangeForm').style.display = 'block';
+});
+document.getElementById('eaChangeCancel').addEventListener('click', closeAllPanels);
+document.getElementById('eaChangeConfirm').addEventListener('click', async ()=>{
+  if(!eaContext) return;
+  const m = members.find(x=>x.id===eaContext.memberId);
+  const slot = m && (m.schedule||[]).find(s=>s.id===eaContext.slotId);
+  if(!slot) return;
+  const newDay = document.getElementById('ea-new-day').value;
+  const newTime = document.getElementById('ea-new-time').value || '10:00';
+  const now = new Date();
+  const forOccDate = fmtDate(nextOccurrence(slot.day, slot.time, now));
+  slot.override = {active:true, day:newDay, time:newTime, forOccDate};
+  await saveMembers();
+  closeAllPanels();
+  renderScheduleGrid();
+});
+function openVirtualCancel(memberId, slotId){
+  const m = members.find(x=>x.id===memberId);
+  const slot = m && (m.schedule||[]).find(s=>s.id===slotId);
+  if(!slot || !slot.override) return;
+  vcContext = {memberId, slotId};
+  document.getElementById('vcSub').textContent = `${m.name} — ${slot.day} ${slot.time} dersi bu hafta için ${slot.override.day} ${slot.override.time} saatine taşındı.`;
+  openPanel('virtualCancelPanel');
+}
+document.getElementById('vcCloseBtn').addEventListener('click', closeAllPanels);
+document.getElementById('vcCancelBtn').addEventListener('click', async ()=>{
+  if(!vcContext) return;
+  const m = members.find(x=>x.id===vcContext.memberId);
+  const slot = m && (m.schedule||[]).find(s=>s.id===vcContext.slotId);
+  if(slot && slot.override) slot.override.active = false;
+  await saveMembers();
+  closeAllPanels();
+  renderScheduleGrid();
+});
+
+/* ---------- ARKA PLAN MÜSAİTLİK SİSTEMİ (2 oda / stüdyo kapasitesi) ---------- */
+function busyInstructorsForDateTime(dateStr, time, excludeDemoId){
+  const dayName = JS_DOW[new Date(dateStr+'T00:00:00').getDay()];
+  let set = new Set();
+  members.forEach(m=>(m.schedule||[]).forEach(s=>{ if(s.day===dayName && s.time===time) set.add(s.instructorId); }));
+  demos.forEach(d=>{ if(d.id===excludeDemoId) return; if(d.status==='pending' && d.date===dateStr && d.time===time) set.add(d.instructorId); });
+  return set;
+}
+function busyInstructorsForWeekday(dayName, time){
+  let set = new Set();
+  members.forEach(m=>(m.schedule||[]).forEach(s=>{ if(s.day===dayName && s.time===time) set.add(s.instructorId); }));
+  return set;
+}
+function isDemoSlotAvailable(dateStr, time, instructorId, excludeDemoId){
+  const busy = busyInstructorsForDateTime(dateStr, time, excludeDemoId);
+  if(busy.has(instructorId)) return false;
+  return busy.size < STUDIO_ROOMS;
+}
+
+/* ---------- DEMO SEANS (EXCEL TABLOSU) ---------- */
+function refreshDemoTimeOptions(preferredTime){
+  const date = document.getElementById('d-date').value;
+  const instructorId = document.getElementById('d-instructor').value;
+  const sel = document.getElementById('d-time');
+  if(!date || !instructorId){ sel.innerHTML=''; return; }
+  const times = getAllTimeSlots();
+  const avail = times.filter(t=> isDemoSlotAvailable(date, t, instructorId, null));
+  if(avail.length===0){ sel.innerHTML = '<option value="">Uygun saat yok</option>'; return; }
+  sel.innerHTML = avail.map(t=>`<option value="${t}" ${t===preferredTime?'selected':''}>${t}</option>`).join('');
+}
+document.getElementById('d-date').addEventListener('change', ()=>refreshDemoTimeOptions());
+document.getElementById('d-instructor').addEventListener('change', ()=>refreshDemoTimeOptions());
+
+document.getElementById('hocaDemoAddBtn').addEventListener('click', ()=>{
+  document.getElementById('d-name').value = '';
+  document.getElementById('d-phone').value = '';
+  document.getElementById('d-date').value = todayStr();
+  document.getElementById('d-instructor').innerHTML = instructors.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('');
+  refreshDemoTimeOptions();
+  openPanel('demoAddPanel');
+});
+document.getElementById('demoCancelBtn').addEventListener('click', closeAllPanels);
+document.getElementById('demoSaveBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('d-name').value.trim();
+  const phone = document.getElementById('d-phone').value.trim();
+  const date = document.getElementById('d-date').value;
+  const time = document.getElementById('d-time').value;
+  const instructorId = document.getElementById('d-instructor').value;
+  if(!name){ alert('Lütfen isim girin.'); return; }
+  if(!date){ alert('Lütfen tarih girin.'); return; }
+  if(!time){ alert('Bu hoca ve tarih için uygun saat bulunmuyor.'); return; }
+  if(!isDemoSlotAvailable(date, time, instructorId, null)){
+    alert('Bu saat artık uygun değil, lütfen tekrar seçin.');
+    refreshDemoTimeOptions();
+    return;
+  }
+  demos.push({id: uid('d'), name, phone, date, time, instructorId, status:'pending'});
+  await saveDemos();
+  closeAllPanels();
+  if(currentTab==='demoSchedule') renderDemoGrid();
+});
+
+function openDemoAddFromCell(day, time){
+  const instructorId = currentDemoInstructorFilter!=='all' ? currentDemoInstructorFilter : (instructors[0]?instructors[0].id:null);
+  document.getElementById('d-name').value = '';
+  document.getElementById('d-phone').value = '';
+  const date = fmtDate(nextOccurrence(day, time, new Date()));
+  document.getElementById('d-date').value = date;
+  document.getElementById('d-instructor').innerHTML = instructors.map(i=>`<option value="${i.id}" ${i.id===instructorId?'selected':''}>${escapeHtml(i.name)}</option>`).join('');
+  refreshDemoTimeOptions(time);
+  openPanel('demoAddPanel');
+}
+
+function renderDemoGrid(){
+  const times = getAllTimeSlots();
+  const table = document.getElementById('demoTable');
+  let cellEntries = {};
+  function key(d,t){ return d+'|'+t; }
+  demos.forEach(d=>{
+    if(currentDemoInstructorFilter!=='all' && d.instructorId!==currentDemoInstructorFilter) return;
+    const dayName = JS_DOW[new Date(d.date+'T00:00:00').getDay()];
+    const k = key(dayName, d.time);
+    if(!cellEntries[k]) cellEntries[k]=[];
+    cellEntries[k].push(d);
+  });
+
+  let thead = '<thead><tr><th>Saat</th>'+DAY_ORDER.map(d=>`<th>${d}</th>`).join('')+'</tr></thead>';
+  let tbody = '<tbody>';
+  times.forEach(t=>{
+    tbody += `<tr><td class="time-cell">${t}</td>`;
+    DAY_ORDER.forEach(day=>{
+      const busy = busyInstructorsForWeekday(day, t);
+      const isFull = busy.size >= STUDIO_ROOMS;
+      const entries = cellEntries[key(day,t)] || [];
+      const cellCls = isFull ? 'cell-full' : '';
+      if(entries.length===0){
+        if(!isFull){
+          tbody += `<td class="slot-cell ${cellCls}" style="cursor:pointer;" data-role="demo-empty-cell" data-day="${day}" data-time="${t}"></td>`;
+        } else {
+          tbody += `<td class="slot-cell ${cellCls}"></td>`;
+        }
+      } else {
+        tbody += `<td class="slot-cell ${cellCls}">`;
+        entries.forEach(d=>{
+          const extraCls = d.status==='rejected' ? 'moved' : (d.status==='converted' ? 'virtual' : '');
+          const statusTag = d.status==='converted' ? ' ✓ üye' : (d.status==='rejected' ? ' · red' : '');
+          const dateLabel = d.date.slice(8,10)+'.'+d.date.slice(5,7);
+          const dataAttr = d.status==='pending' ? `data-role="demo-entry" data-demo-id="${d.id}" style="cursor:pointer;"` : 'style="cursor:default;"';
+          tbody += `<div class="cell-entry ${extraCls}" ${dataAttr}>
+            <div class="en-name">${escapeHtml(d.name)}${statusTag}</div>
+            <div class="en-meta">${dateLabel} · ${escapeHtml(getInstructorName(d.instructorId))}</div>
+          </div>`;
+        });
+        tbody += `</td>`;
+      }
+    });
+    tbody += `</tr>`;
+  });
+  tbody += '</tbody>';
+  table.innerHTML = thead+tbody;
+}
+document.getElementById('demoTable').addEventListener('click', (e)=>{
+  const entry = e.target.closest('.cell-entry[data-role="demo-entry"]');
+  if(entry){ openDemoCellAction(entry.dataset.demoId); return; }
+  const emptyCell = e.target.closest('td[data-role="demo-empty-cell"]');
+  if(emptyCell){ openDemoAddFromCell(emptyCell.dataset.day, emptyCell.dataset.time); return; }
+});
+
+function openDemoCellAction(demoId){
+  const d = demos.find(x=>x.id===demoId);
+  if(!d) return;
+  demoCellContextId = demoId;
+  document.getElementById('demoCellActionTitle').textContent = d.name;
+  document.getElementById('demoCellActionSub').textContent = `${d.date} · ${d.time} · ${getInstructorName(d.instructorId)}`;
+  openPanel('demoCellActionPanel');
+}
+document.getElementById('demoCellAddBtn').addEventListener('click', ()=>{ const id=demoCellContextId; closeAllPanels(); if(id) convertDemo(id); });
+document.getElementById('demoCellRejectBtn').addEventListener('click', async ()=>{ const id=demoCellContextId; closeAllPanels(); if(id) await rejectDemo(id); });
+document.getElementById('demoCellCloseBtn').addEventListener('click', closeAllPanels);
+
+function convertDemo(demoId){
+  const d = demos.find(x=>x.id===demoId);
+  if(!d) return;
+  openFreshMemberPanel({name:d.name, phone:d.phone, instructorId:d.instructorId, slotCount:2, demoId:d.id});
+}
+async function rejectDemo(demoId){
+  const d = demos.find(x=>x.id===demoId);
+  if(!d) return;
+  d.status = 'rejected';
+  await saveDemos();
+  renderDemoGrid();
+}
+
+initRole();
+</script>
+</body>
+</html>
