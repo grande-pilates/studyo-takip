@@ -13,6 +13,7 @@
     --sage:#5B6E52; --sage-dark:#455339; --sage-soft:#E7EBE0;
     --clay:#A9754F; --clay-soft:#F0E4D8;
     --alert:#AE4F3D; --alert-soft:#F4E3DE; --line:#E1DCD0;
+    --partial-soft:#F2E2A8;
     --gray:#9C9A90; --gray-soft:#EDEBE4;
     --logo-bg:#B7C79F; --logo-bg-soft:#EEF2E7;
   }
@@ -94,6 +95,9 @@
   .cell-entry.virtual .en-name{color:var(--clay);}
   table.sched-table td.cell-full{background:#3B3A34;}
   table.sched-table td.cell-full .en-meta{color:#C9C7BE;}
+  table.sched-table td.cell-partial{background:var(--partial-soft);}
+  table.sched-table td.cell-instructor-busy{background:#3B3A34;cursor:not-allowed;}
+  .cell-busy-label{color:#C9C7BE;font-size:10.5px;line-height:1.4;padding:4px 2px;text-align:center;font-weight:600;}
 
   .schedule-slot{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;background:var(--bg);}
   .schedule-slot-row{display:flex;gap:6px;margin-bottom:6px;}
@@ -218,6 +222,15 @@
     </div>
     <div class="stats" id="financeStats" style="margin-bottom:20px;"></div>
     <div id="financeTable"></div>
+  </div>
+
+  <!-- RAPORLAR (sadece sahibi) -->
+  <div class="view" id="view-reports">
+    <p class="hint" style="margin-bottom:16px;">Her ayın 1'i ile 7'si arasında "Bu Ayki Raporu Çıkar" butonuna basarak geçen ayın tüm haftalarını, ders programını, gelir/gider durumunu, paket türü ve kendi üyesi/normal ayrımlı hoca maaşlarını, demo sayılarını özetleyen bir rapor oluşturabilirsiniz. İndirip bilgisayarınıza kaydedebilir, ardından sistemden silebilirsiniz.</p>
+    <div class="controls">
+      <button class="btn-add" id="generateReportBtn">📄 Bu Ayki Raporu Çıkar</button>
+    </div>
+    <div id="reportsList"></div>
   </div>
 
   <!-- HOCALAR (sadece sahibi) -->
@@ -394,6 +407,7 @@ let members = [];
 let instructors = [];
 let demos = [];
 let demoLog = [];
+let monthlyReports = [];
 let lessonLog = [];
 let editingId = null;
 let paymentForId = null;
@@ -474,7 +488,7 @@ function showApp(){
 function buildTabs(){
   const tabs = role==='hoca'
     ? [{id:'schedule',label:'Ders Programı'},{id:'demoSchedule',label:'Demo Programı'},{id:'members',label:'Üyeler'}]
-    : [{id:'members',label:'Üyeler'},{id:'schedule',label:'Ders Programı'},{id:'demoSchedule',label:'Demo Programı'},{id:'demoEvaluation',label:'Demo Değerlendirme'},{id:'finance',label:'Gelir/Gider'},{id:'instructorsMgmt',label:'Hocalar'}];
+    : [{id:'members',label:'Üyeler'},{id:'schedule',label:'Ders Programı'},{id:'demoSchedule',label:'Demo Programı'},{id:'demoEvaluation',label:'Demo Değerlendirme'},{id:'finance',label:'Gelir/Gider'},{id:'reports',label:'Raporlar'},{id:'instructorsMgmt',label:'Hocalar'}];
   const wrap = document.getElementById('tabsRow');
   wrap.innerHTML = tabs.map((t,i)=>`<button class="tab-btn ${i===0?'on':''}" data-view="${t.id}">${t.label}</button>`).join('');
   currentTab = tabs[0].id;
@@ -492,6 +506,7 @@ function buildTabs(){
       if(currentTab==='instructorsMgmt') renderInstructorMgmt();
       if(currentTab==='demoEvaluation') renderDemoEvaluation();
       if(currentTab==='finance') renderFinance();
+      if(currentTab==='reports') renderReports();
       if(currentTab==='members') render();
     });
   });
@@ -512,6 +527,7 @@ async function loadAll(){
   try{ demos = JSON.parse(await supaGet('demos') || '[]'); }catch(e){ demos = []; }
   try{ demoLog = JSON.parse(await supaGet('demoLog') || '[]'); }catch(e){ demoLog = []; }
   try{ lessonLog = JSON.parse(await supaGet('lessonLog') || '[]'); }catch(e){ lessonLog = []; }
+  try{ monthlyReports = JSON.parse(await supaGet('monthlyReports') || '[]'); }catch(e){ monthlyReports = []; }
 
   processSchedules();
   renderStats();
@@ -523,12 +539,14 @@ async function loadAll(){
   if(currentTab==='instructorsMgmt') renderInstructorMgmt();
   if(currentTab==='demoEvaluation') renderDemoEvaluation();
   if(currentTab==='finance') renderFinance();
+  if(currentTab==='reports') renderReports();
 }
 async function saveMembers(){ await supaSet('members', JSON.stringify(members)); }
 async function saveInstructors(){ await supaSet('instructors', JSON.stringify(instructors)); }
 async function saveDemos(){ await supaSet('demos', JSON.stringify(demos)); }
 async function saveDemoLog(){ await supaSet('demoLog', JSON.stringify(demoLog)); }
 async function saveLessonLog(){ await supaSet('lessonLog', JSON.stringify(lessonLog)); }
+async function saveMonthlyReports(){ await supaSet('monthlyReports', JSON.stringify(monthlyReports)); }
 
 /* ---------- OTOMATİK SEANS DÜŞME + TEK SEFERLİK DEĞİŞİKLİK ---------- */
 function mostRecentOccurrence(dayName, timeStr, now){
@@ -555,6 +573,7 @@ function logLesson(m, instructorId, dateStr){
     instructorId,
     date: dateStr,
     amount: lessonPriceOf(m),
+    type: m.type,
     isOwnMember: !!m.isOwnMember
   });
 }
@@ -1264,9 +1283,25 @@ function renderDemoGrid(){
       const busy = busyInstructorsForWeekday(day, t);
       const isFull = busy.size >= STUDIO_ROOMS;
       const entries = cellEntries[key(day,t)] || [];
-      const cellCls = isFull ? 'cell-full' : '';
+
+      // Seçili bir hoca sekmesindeyken (Tümü değil), o hocanın kendi düzenli dersi
+      // bu saatte varsa hücreyi doğrudan meşgul göster.
+      const instructorOwnBusy = currentDemoInstructorFilter!=='all' && busy.has(currentDemoInstructorFilter);
+
+      let cellCls = '';
+      if(instructorOwnBusy){
+        cellCls = 'cell-instructor-busy';
+      } else if(isFull){
+        cellCls = 'cell-full';
+      } else if(currentDemoInstructorFilter==='all' && busy.size>0){
+        cellCls = 'cell-partial';
+      }
+      const blocked = instructorOwnBusy || isFull;
+
       if(entries.length===0){
-        if(!isFull){
+        if(instructorOwnBusy){
+          tbody += `<td class="slot-cell ${cellCls}"><div class="cell-busy-label">Dolu<br>(Ders var)</div></td>`;
+        } else if(!blocked){
           tbody += `<td class="slot-cell ${cellCls}" style="cursor:pointer;" data-role="demo-empty-cell" data-day="${day}" data-time="${t}"></td>`;
         } else {
           tbody += `<td class="slot-cell ${cellCls}"></td>`;
@@ -1439,9 +1474,13 @@ function renderFinance(){
     const amount = Number(l.amount||0);
     totalLessonRevenue += amount;
     if(!l.instructorId){ unassignedRevenue += amount; unassignedLessons += 1; return; }
-    if(!perInstructor[l.instructorId]) perInstructor[l.instructorId] = {revenue:0, commission:0, lessonCount:0};
+    if(!perInstructor[l.instructorId]) perInstructor[l.instructorId] = {revenue:0, commission:0, lessonCount:0, byType:{}};
     perInstructor[l.instructorId].revenue += amount;
     perInstructor[l.instructorId].lessonCount += 1;
+    const typeKey = l.type || 'Belirtilmemiş';
+    if(!perInstructor[l.instructorId].byType[typeKey]) perInstructor[l.instructorId].byType[typeKey] = {normal:0, own:0};
+    if(l.isOwnMember) perInstructor[l.instructorId].byType[typeKey].own += 1;
+    else perInstructor[l.instructorId].byType[typeKey].normal += 1;
     const inst = instructors.find(i=>i.id===l.instructorId);
     const pct = inst ? (l.isOwnMember ? (inst.ownMemberPrimPercent!=null?inst.ownMemberPrimPercent:0) : (inst.primPercent!=null?inst.primPercent:0)) : 0;
     const commission = amount * (pct/100);
@@ -1458,7 +1497,7 @@ function renderFinance(){
 
   let html = '<div class="list"><div class="row head" style="grid-template-columns:1.2fr 1fr 0.8fr 0.8fr 1fr;"><div>Hoca</div><div>Ders Geliri (bu ay)</div><div>Prim %</div><div>Ders Sayısı</div><div>Maaş (hesaplanan)</div></div>';
   instructors.forEach(inst=>{
-    const data = perInstructor[inst.id] || {revenue:0, commission:0, lessonCount:0};
+    const data = perInstructor[inst.id] || {revenue:0, commission:0, lessonCount:0, byType:{}};
     const pctLabel = `${inst.primPercent!=null?inst.primPercent:'—'}% / ${inst.ownMemberPrimPercent!=null?inst.ownMemberPrimPercent:'—'}%`;
     html += `<div class="row" style="grid-template-columns:1.2fr 1fr 0.8fr 0.8fr 1fr;">
       <div class="m-name">${escapeHtml(inst.name)}</div>
@@ -1467,6 +1506,16 @@ function renderFinance(){
       <div class="sessions">${data.lessonCount}</div>
       <div class="sessions" style="color:var(--alert);">${data.commission.toLocaleString('tr-TR')}₺</div>
     </div>`;
+    const typeKeys = Object.keys(data.byType).sort();
+    if(typeKeys.length>0){
+      const typeLine = typeKeys.map(tk=>{
+        const t = data.byType[tk];
+        return `${escapeHtml(tk)}: ${t.normal+t.own} <span style="color:var(--ink-soft);">(${t.normal} normal, ${t.own} kendi üyesi)</span>`;
+      }).join(' · ');
+      html += `<div class="row" style="grid-template-columns:1fr;padding-top:0;padding-bottom:14px;background:var(--bg);">
+        <div style="font-size:12px;color:var(--ink-soft);">${typeLine}</div>
+      </div>`;
+    }
   });
   if(unassignedRevenue>0){
     html += `<div class="row" style="grid-template-columns:1.2fr 1fr 0.8fr 0.8fr 1fr;">
@@ -1482,6 +1531,261 @@ function renderFinance(){
   document.getElementById('financeTable').innerHTML = html;
 }
 document.getElementById('finance-month').addEventListener('change', renderFinance);
+
+/* ---------- AYLIK RAPOR SİSTEMİ ---------- */
+const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+
+function previousMonthStr(){
+  const now = new Date();
+  let y = now.getFullYear(), mo = now.getMonth(); // mo: 0-indeksli mevcut ay
+  mo -= 1; if(mo<0){ mo = 11; y -= 1; }
+  return `${y}-${String(mo+1).padStart(2,'0')}`;
+}
+function weeksInMonth(monthStr){
+  // monthStr: 'YYYY-MM' — o ayı kesişen tüm haftaların (Pazartesi başlangıçlı) listesini döndürür
+  const [y, mo] = monthStr.split('-').map(Number);
+  const firstDay = new Date(y, mo-1, 1);
+  const lastDay = new Date(y, mo, 0);
+  let weeks = [];
+  let cur = mondayOf(firstDay);
+  while(cur <= lastDay){
+    weeks.push(new Date(cur));
+    cur = new Date(cur); cur.setDate(cur.getDate()+7);
+  }
+  return weeks;
+}
+
+async function generateReportNow(){
+  const monthStr = previousMonthStr();
+  const [y, mo] = monthStr.split('-').map(Number);
+  const monthLabel = `${TR_MONTHS[mo-1]} ${y}`;
+
+  const hasLessonData = lessonLog.some(l=>(l.date||'').slice(0,7)===monthStr);
+  const hasDemoData = demoLog.some(d=>(d.date||'').slice(0,7)===monthStr);
+  const hasPaymentData = members.some(m=>(m.payments||[]).some(p=>(p.date||'').slice(0,7)===monthStr));
+  if(!hasLessonData && !hasDemoData && !hasPaymentData){
+    alert(`${monthLabel} için sistemde herhangi bir ders, demo veya ödeme kaydı bulunamadı. Rapor oluşturulmadı.`);
+    return;
+  }
+
+  const existing = monthlyReports.find(r=>r.month===monthStr);
+  if(existing){
+    if(!confirm(`${monthLabel} için zaten bir rapor var. Güncel verilerle üzerine yazılsın mı?`)) return;
+    monthlyReports = monthlyReports.filter(r=>r.id!==existing.id);
+  }
+
+  const htmlContent = buildMonthlyReportHTML(monthStr);
+  monthlyReports.push({id: uid('rep'), month: monthStr, generatedAt: new Date().toISOString(), htmlContent});
+  await saveMonthlyReports();
+  renderReports();
+  alert(`${monthLabel} raporu oluşturuldu.`);
+}
+document.getElementById('generateReportBtn').addEventListener('click', generateReportNow);
+
+function buildMonthlyReportHTML(monthStr){
+  const [y, mo] = monthStr.split('-').map(Number);
+  const monthLabel = `${TR_MONTHS[mo-1]} ${y}`;
+  const weeks = weeksInMonth(monthStr);
+
+  // AY TOPLAMLARI
+  let totalCollected = 0;
+  members.forEach(m=> (m.payments||[]).forEach(p=>{ if((p.date||'').slice(0,7)===monthStr) totalCollected += Number(p.amount||0); }));
+
+  let totalLessonRevenue = 0, totalCommission = 0;
+  let perInstructorMonth = {};
+  lessonLog.forEach(l=>{
+    if((l.date||'').slice(0,7)!==monthStr) return;
+    const amount = Number(l.amount||0);
+    totalLessonRevenue += amount;
+    if(!l.instructorId) return;
+    if(!perInstructorMonth[l.instructorId]) perInstructorMonth[l.instructorId] = {revenue:0, commission:0, lessonCount:0, name:getInstructorName(l.instructorId), byType:{}};
+    perInstructorMonth[l.instructorId].revenue += amount;
+    perInstructorMonth[l.instructorId].lessonCount += 1;
+    const typeKey = l.type || 'Belirtilmemiş';
+    if(!perInstructorMonth[l.instructorId].byType[typeKey]) perInstructorMonth[l.instructorId].byType[typeKey] = {normal:0, own:0};
+    if(l.isOwnMember) perInstructorMonth[l.instructorId].byType[typeKey].own += 1;
+    else perInstructorMonth[l.instructorId].byType[typeKey].normal += 1;
+    const inst = instructors.find(i=>i.id===l.instructorId);
+    const pct = inst ? (l.isOwnMember ? (inst.ownMemberPrimPercent!=null?inst.ownMemberPrimPercent:0) : (inst.primPercent!=null?inst.primPercent:0)) : 0;
+    const commission = amount * (pct/100);
+    perInstructorMonth[l.instructorId].commission += commission;
+    totalCommission += commission;
+  });
+  const netMonth = totalCollected - totalCommission;
+
+  let demoTotal=0, demoConverted=0, demoRejected=0, demoPending=0;
+  demoLog.forEach(d=>{
+    if((d.date||'').slice(0,7)!==monthStr) return;
+    demoTotal++;
+    if(d.status==='converted') demoConverted++;
+    else if(d.status==='rejected') demoRejected++;
+    else demoPending++;
+  });
+
+  // HAFTA HAFTA BÖLÜMLER
+  let weeksHtml = '';
+  weeks.forEach(mon=>{
+    const sun = new Date(mon); sun.setDate(sun.getDate()+6);
+    const weekLabel = isoWeekLabel(mon);
+    const wStart = fmtDate(mon), wEnd = fmtDate(sun);
+
+    const weekLessons = lessonLog.filter(l=> l.date>=wStart && l.date<=wEnd);
+    const weekRevenue = weekLessons.reduce((s,l)=>s+Number(l.amount||0),0);
+    let weekPerInstructor = {};
+    weekLessons.forEach(l=>{
+      if(!l.instructorId) return;
+      if(!weekPerInstructor[l.instructorId]) weekPerInstructor[l.instructorId] = {revenue:0, commission:0, count:0, name:getInstructorName(l.instructorId)};
+      weekPerInstructor[l.instructorId].revenue += Number(l.amount||0);
+      weekPerInstructor[l.instructorId].count += 1;
+      const inst = instructors.find(i=>i.id===l.instructorId);
+      const pct = inst ? (l.isOwnMember ? (inst.ownMemberPrimPercent!=null?inst.ownMemberPrimPercent:0) : (inst.primPercent!=null?inst.primPercent:0)) : 0;
+      weekPerInstructor[l.instructorId].commission += Number(l.amount||0) * (pct/100);
+    });
+
+    const weekDemos = demoLog.filter(d=> d.date>=wStart && d.date<=wEnd);
+    const wDemoConverted = weekDemos.filter(d=>d.status==='converted').length;
+    const wDemoRejected = weekDemos.filter(d=>d.status==='rejected').length;
+    const wDemoPending = weekDemos.filter(d=>d.status==='pending').length;
+
+    // O haftanın ders programı görünümü (gün gün)
+    let scheduleRows = '';
+    DAY_ORDER.forEach(day=>{
+      const dow = JS_DOW.indexOf(day);
+      const dayDate = new Date(mon); dayDate.setDate(dayDate.getDate() + ((dow+6)%7));
+      const dayStr = fmtDate(dayDate);
+      const dayLessons = weekLessons.filter(l=>l.date===dayStr).sort((a,b)=> (a.memberName||'').localeCompare(b.memberName||''));
+      if(dayLessons.length===0) return;
+      scheduleRows += `<tr><td style="font-weight:600;white-space:nowrap;">${day} (${dayStr.slice(8,10)}.${dayStr.slice(5,7)})</td><td>${dayLessons.map(l=>`${escapeHtml(l.memberName)} · ${escapeHtml(getInstructorName(l.instructorId))}`).join('<br>')}</td></tr>`;
+    });
+    if(!scheduleRows) scheduleRows = '<tr><td colspan="2" style="color:#8a887c;">Bu hafta işlenmiş ders kaydı yok.</td></tr>';
+
+    let instRows = '';
+    Object.values(weekPerInstructor).forEach(d=>{
+      instRows += `<tr><td>${escapeHtml(d.name)}</td><td>${d.count}</td><td>${d.revenue.toLocaleString('tr-TR')}₺</td><td>${d.commission.toLocaleString('tr-TR')}₺</td></tr>`;
+    });
+    if(!instRows) instRows = '<tr><td colspan="4" style="color:#8a887c;">Kayıt yok</td></tr>';
+
+    weeksHtml += `
+    <div class="week-block">
+      <h3>${weekLabel}</h3>
+      <div class="week-stats">
+        <div><span class="wnum">${weekRevenue.toLocaleString('tr-TR')}₺</span><span class="wlabel">Ders Geliri</span></div>
+        <div><span class="wnum">${weekDemos.length}</span><span class="wlabel">Demo (${wDemoConverted} üye / ${wDemoRejected} red / ${wDemoPending} bekliyor)</span></div>
+      </div>
+      <h4>Hoca Bazlı Özet</h4>
+      <table><thead><tr><th>Hoca</th><th>Ders Sayısı</th><th>Gelir</th><th>Maaş</th></tr></thead><tbody>${instRows}</tbody></table>
+      <h4>Ders Programı Görünümü</h4>
+      <table><thead><tr><th>Gün</th><th>Dersler</th></tr></thead><tbody>${scheduleRows}</tbody></table>
+    </div>`;
+  });
+
+  let monthInstCards = '';
+  Object.values(perInstructorMonth).forEach(d=>{
+    let typeRows = '';
+    Object.keys(d.byType).sort().forEach(typeKey=>{
+      const t = d.byType[typeKey];
+      typeRows += `<tr><td>${escapeHtml(typeKey)}</td><td>${t.normal + t.own}</td><td>${t.normal}</td><td>${t.own}</td></tr>`;
+    });
+    monthInstCards += `
+    <div class="inst-card">
+      <div class="inst-card-head">
+        <span class="inst-card-name">${escapeHtml(d.name)}</span>
+        <span class="inst-card-stat">${d.lessonCount} ders · ${d.revenue.toLocaleString('tr-TR')}₺ ciro · <b>${d.commission.toLocaleString('tr-TR')}₺ maaş</b></span>
+      </div>
+      <table><thead><tr><th>Paket Türü</th><th>Toplam</th><th>Normal</th><th>Kendi Üyesi</th></tr></thead><tbody>${typeRows}</tbody></table>
+    </div>`;
+  });
+  if(!monthInstCards) monthInstCards = '<p style="color:#8a887c;">Bu ay için hoca bazlı kayıt yok.</p>';
+
+  return `<!DOCTYPE html>
+<html lang="tr"><head><meta charset="UTF-8"><title>Aylık Rapor — ${monthLabel}</title>
+<style>
+  body{font-family:'Georgia',serif;background:#F6F4EF;color:#26251F;margin:0;padding:40px 24px;}
+  .wrap{max-width:820px;margin:0 auto;}
+  h1{font-size:30px;margin:0 0 6px;}
+  .sub{color:#6B695F;font-size:13px;margin-bottom:32px;}
+  .summary{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:32px;}
+  .summary div{background:#fff;border:1px solid #E1DCD0;border-radius:12px;padding:14px 20px;text-align:center;min-width:120px;}
+  .summary .num{font-size:22px;font-weight:700;display:block;}
+  .summary .label{font-size:11.5px;color:#6B695F;}
+  table{width:100%;border-collapse:collapse;margin-bottom:18px;font-size:13px;}
+  th,td{border:1px solid #E1DCD0;padding:8px 10px;text-align:left;}
+  th{background:#E7EBE0;color:#455339;}
+  h2{font-size:20px;margin-top:40px;border-bottom:2px solid #5B6E52;padding-bottom:8px;}
+  h3{font-size:17px;color:#455339;margin:28px 0 10px;}
+  h4{font-size:13.5px;color:#6B695F;margin:14px 0 6px;text-transform:uppercase;letter-spacing:0.03em;}
+  .week-block{background:#fff;border:1px solid #E1DCD0;border-radius:12px;padding:20px 22px;margin-bottom:18px;}
+  .inst-card{background:#fff;border:1px solid #E1DCD0;border-radius:12px;padding:16px 20px;margin-bottom:14px;}
+  .inst-card-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .inst-card-name{font-size:16px;font-weight:700;}
+  .inst-card-stat{font-size:13px;color:#6B695F;}
+  .week-stats{display:flex;gap:24px;margin-bottom:6px;}
+  .week-stats .wnum{font-size:19px;font-weight:700;display:block;}
+  .week-stats .wlabel{font-size:11.5px;color:#6B695F;}
+</style></head>
+<body><div class="wrap">
+  <h1>Aylık Rapor — ${monthLabel}</h1>
+  <p class="sub">Oluşturulma tarihi: ${new Date().toLocaleDateString('tr-TR')}</p>
+
+  <div class="summary">
+    <div><span class="num">${totalCollected.toLocaleString('tr-TR')}₺</span><span class="label">Tahsilat</span></div>
+    <div><span class="num">${totalLessonRevenue.toLocaleString('tr-TR')}₺</span><span class="label">Gerçekleşen Ders Geliri</span></div>
+    <div><span class="num">${totalCommission.toLocaleString('tr-TR')}₺</span><span class="label">Toplam Maaş Gideri</span></div>
+    <div><span class="num">${netMonth.toLocaleString('tr-TR')}₺</span><span class="label">Net</span></div>
+    <div><span class="num">${demoTotal}</span><span class="label">Toplam Demo (${demoConverted} üye / ${demoRejected} red / ${demoPending} bekliyor)</span></div>
+  </div>
+
+  <h2>Ay Geneli Hoca Maaşları</h2>
+  ${monthInstCards}
+
+  <h2>Hafta Hafta Detay</h2>
+  ${weeksHtml}
+</div></body></html>`;
+}
+
+function renderReports(){
+  const wrap = document.getElementById('reportsList');
+  const sorted = monthlyReports.slice().sort((a,b)=> b.month.localeCompare(a.month));
+  if(sorted.length===0){
+    wrap.innerHTML = '<div class="empty"><div class="big">Henüz rapor yok</div>Bir ay tamamlandığında ve uygulama yeniden açıldığında otomatik olarak burada görünecek.</div>';
+    return;
+  }
+  let html = '<div class="list"><div class="row head" style="grid-template-columns:1.2fr 1fr auto;"><div>Ay</div><div>Oluşturulma Tarihi</div><div></div></div>';
+  sorted.forEach(r=>{
+    const [y,mo] = r.month.split('-').map(Number);
+    const label = `${TR_MONTHS[mo-1]} ${y}`;
+    const genDate = new Date(r.generatedAt).toLocaleDateString('tr-TR');
+    html += `<div class="row" style="grid-template-columns:1.2fr 1fr auto;">
+      <div class="m-name">${label}</div>
+      <div>${genDate}</div>
+      <div class="row-actions">
+        <button class="icon-btn" onclick="downloadReport('${r.id}')">İndir</button>
+        <button class="icon-btn danger" onclick="deleteReport('${r.id}')">Sil</button>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+function downloadReport(reportId){
+  const r = monthlyReports.find(x=>x.id===reportId);
+  if(!r) return;
+  const blob = new Blob([r.htmlContent], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rapor-${r.month}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+async function deleteReport(reportId){
+  if(!confirm('Bu raporu sistemden silmek istediğinize emin misiniz? İndirmediyseniz veriler kaybolur.')) return;
+  monthlyReports = monthlyReports.filter(x=>x.id!==reportId);
+  await saveMonthlyReports();
+  renderReports();
+}
 
 initRole();
 </script>
