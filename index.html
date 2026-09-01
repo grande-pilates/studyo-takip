@@ -262,13 +262,13 @@
 
 <!-- ÖDEME / YENİLEME PANELİ -->
 <div class="panel" id="paymentPanel">
-  <h2>Ödeme / Paket Yenile</h2>
+  <h2>Yeni Paket</h2>
   <p class="studio-sub" id="paymentForName" style="margin-bottom:18px;"></p>
   <div class="field"><label>Paket Türü</label><select id="p-type"></select></div>
   <div class="field"><label>Tutar (₺)</label><input id="p-amount" type="number" min="0" /></div>
   <div class="field"><label>Tarih</label><input id="p-date" type="date" /></div>
   <div class="field"><label>Not (opsiyonel)</label><input id="p-note" placeholder="Örn. Nakit, 8 seanslık paket" /></div>
-  <div class="hint" style="margin:-8px 0 16px;">Kaydettiğinizde kalan seans otomatik olarak 8'e ayarlanır ve paket türü güncellenir.</div>
+  <div class="hint" style="margin:-8px 0 16px;">Kaydettiğinizde üyenin yeni paketi, mevcut kalan ders sayısının üzerine 8 seans eklenerek devam eder ve paket türü güncellenir.</div>
   <div class="panel-actions">
     <button class="btn-secondary" id="paymentCancelBtn">Vazgeç</button>
     <button class="btn-primary" id="paymentSaveBtn">Kaydet</button>
@@ -336,6 +336,9 @@
   <div id="entryChangeForm" style="display:none;">
     <div class="field"><label>Yeni Gün</label><select id="ea-new-day"></select></div>
     <div class="field"><label>Yeni Saat</label><input id="ea-new-time" type="time" /></div>
+    <div class="field"><label>Bu Seans İçin Hoca</label><select id="ea-new-instructor"></select>
+      <div class="hint">Farklı bir hoca seçerseniz, bu tek seferlik dersin geliri o hocanın maaşına yazılır.</div>
+    </div>
     <div class="panel-actions">
       <button class="btn-secondary" id="eaChangeCancel">Vazgeç</button>
       <button class="btn-primary" id="eaChangeConfirm">Onayla</button>
@@ -391,6 +394,7 @@ let members = [];
 let instructors = [];
 let demos = [];
 let demoLog = [];
+let lessonLog = [];
 let editingId = null;
 let paymentForId = null;
 let convertingDemoId = null;
@@ -507,6 +511,7 @@ async function loadAll(){
 
   try{ demos = JSON.parse(await supaGet('demos') || '[]'); }catch(e){ demos = []; }
   try{ demoLog = JSON.parse(await supaGet('demoLog') || '[]'); }catch(e){ demoLog = []; }
+  try{ lessonLog = JSON.parse(await supaGet('lessonLog') || '[]'); }catch(e){ lessonLog = []; }
 
   processSchedules();
   renderStats();
@@ -523,6 +528,7 @@ async function saveMembers(){ await supaSet('members', JSON.stringify(members));
 async function saveInstructors(){ await supaSet('instructors', JSON.stringify(instructors)); }
 async function saveDemos(){ await supaSet('demos', JSON.stringify(demos)); }
 async function saveDemoLog(){ await supaSet('demoLog', JSON.stringify(demoLog)); }
+async function saveLessonLog(){ await supaSet('lessonLog', JSON.stringify(lessonLog)); }
 
 /* ---------- OTOMATİK SEANS DÜŞME + TEK SEFERLİK DEĞİŞİKLİK ---------- */
 function mostRecentOccurrence(dayName, timeStr, now){
@@ -537,9 +543,25 @@ function mostRecentOccurrence(dayName, timeStr, now){
 }
 function nextOccurrence(dayName, timeStr, now){ const d = mostRecentOccurrence(dayName, timeStr, now); d.setDate(d.getDate()+7); return d; }
 
+function lessonPriceOf(m){
+  return (Number(PRICE_MAP[m.type])||0) / PACKAGE_TOTAL;
+}
+function logLesson(m, instructorId, dateStr){
+  if(!instructorId) return;
+  lessonLog.push({
+    id: uid('l'),
+    memberId: m.id,
+    memberName: m.name,
+    instructorId,
+    date: dateStr,
+    amount: lessonPriceOf(m),
+    isOwnMember: !!m.isOwnMember
+  });
+}
 function processSchedules(){
   const now = new Date();
   let changed = false;
+  let logChanged = false;
   members.forEach(m=>{
     (m.schedule||[]).forEach(slot=>{
       const occ = mostRecentOccurrence(slot.day, slot.time, now);
@@ -547,7 +569,11 @@ function processSchedules(){
       const hasActiveOverrideForThisOcc = slot.override && slot.override.active && slot.override.forOccDate === occStr;
       if(!hasActiveOverrideForThisOcc && occStr > (slot.lastDeductedDate || '')){
         const isFrozen = m.frozenUntil && occStr <= m.frozenUntil;
-        if(!isFrozen && m.remaining>0) m.remaining -= 1;
+        if(!isFrozen && m.remaining>0){
+          m.remaining -= 1;
+          logLesson(m, slot.instructorId, occStr);
+          logChanged = true;
+        }
         slot.lastDeductedDate = occStr;
         changed = true;
       }
@@ -557,7 +583,11 @@ function processSchedules(){
         targetDate.setHours(hh||0, mm||0, 0, 0);
         if(targetDate <= now){
           const isFrozen = m.frozenUntil && slot.override.forOccDate <= m.frozenUntil;
-          if(!isFrozen && m.remaining>0) m.remaining -= 1;
+          if(!isFrozen && m.remaining>0){
+            m.remaining -= 1;
+            logLesson(m, slot.override.instructorId || slot.instructorId, slot.override.forOccDate);
+            logChanged = true;
+          }
           slot.lastDeductedDate = slot.override.forOccDate;
           slot.override.active = false;
           changed = true;
@@ -566,6 +596,7 @@ function processSchedules(){
     });
   });
   if(changed) saveMembers();
+  if(logChanged) saveLessonLog();
 }
 setInterval(async ()=>{ processSchedules(); renderStats(); if(currentTab==='schedule') renderScheduleGrid(); if(currentTab==='members') render(); }, 30000);
 
@@ -636,7 +667,7 @@ function render(){
         ${m.isOwnMember?`<div class="badge active" style="margin-top:5px;">Kendi Üyesi</div>`:''}
       </div>
       <div class="row-actions">
-        <button class="icon-btn" onclick="openPayment('${m.id}')">Ödeme Ekle</button>
+        <button class="icon-btn" onclick="openPayment('${m.id}')">Yeni Paket</button>
         <button class="icon-btn" onclick="openEdit('${m.id}')">Düzenle</button>
         <button class="icon-btn danger" onclick="deleteMember('${m.id}')">Sil</button>
       </div>
@@ -848,7 +879,7 @@ document.getElementById('paymentSaveBtn').addEventListener('click', async ()=>{
   m.payments = m.payments || [];
   m.payments.push({id: uid('p'), amount, date, note});
   m.type = type;
-  m.remaining = PACKAGE_TOTAL;
+  m.remaining = (Number(m.remaining)||0) + PACKAGE_TOTAL;
   await saveMembers();
   closeAllPanels();
   render(); renderScheduleGrid();
@@ -1027,13 +1058,17 @@ function renderScheduleGrid(){
 
   members.forEach(m=>{
     (m.schedule||[]).forEach(slot=>{
-      if(currentInstructorFilter!=='all' && slot.instructorId!==currentInstructorFilter) return;
       const nextStr = fmtDate(nextOccurrence(slot.day, slot.time, now));
       const hasMove = slot.override && slot.override.active && slot.override.forOccDate === nextStr;
       const isFrozenNow = m.frozenUntil && todayStr() <= m.frozenUntil;
-      pushEntry(slot.day, slot.time, {memberId:m.id, memberName:m.name, type:m.type, instructorId:slot.instructorId, slotId:slot.id, frozen:isFrozenNow, moved:hasMove});
+      if(currentInstructorFilter==='all' || slot.instructorId===currentInstructorFilter){
+        pushEntry(slot.day, slot.time, {memberId:m.id, memberName:m.name, type:m.type, instructorId:slot.instructorId, slotId:slot.id, frozen:isFrozenNow, moved:hasMove});
+      }
       if(hasMove){
-        pushEntry(slot.override.day, slot.override.time, {memberId:m.id, memberName:m.name, type:m.type, instructorId:slot.instructorId, slotId:slot.id, frozen:isFrozenNow, virtual:true});
+        const virtInstructorId = slot.override.instructorId || slot.instructorId;
+        if(currentInstructorFilter==='all' || virtInstructorId===currentInstructorFilter){
+          pushEntry(slot.override.day, slot.override.time, {memberId:m.id, memberName:m.name, type:m.type, instructorId:virtInstructorId, slotId:slot.id, frozen:isFrozenNow, virtual:true});
+        }
       }
     });
   });
@@ -1089,6 +1124,10 @@ document.getElementById('eaChangeBtn').addEventListener('click', ()=>{
   const sel = document.getElementById('ea-new-day');
   sel.innerHTML = DAY_ORDER.map(d=>`<option>${d}</option>`).join('');
   document.getElementById('ea-new-time').value = '10:00';
+  const m = eaContext && members.find(x=>x.id===eaContext.memberId);
+  const slot = m && (m.schedule||[]).find(s=>s.id===eaContext.slotId);
+  const instSel = document.getElementById('ea-new-instructor');
+  instSel.innerHTML = instructors.map(inst=>`<option value="${inst.id}" ${slot && inst.id===slot.instructorId?'selected':''}>${escapeHtml(inst.name)}</option>`).join('');
   document.getElementById('entryChangeForm').style.display = 'block';
 });
 document.getElementById('eaChangeCancel').addEventListener('click', closeAllPanels);
@@ -1099,9 +1138,10 @@ document.getElementById('eaChangeConfirm').addEventListener('click', async ()=>{
   if(!slot) return;
   const newDay = document.getElementById('ea-new-day').value;
   const newTime = document.getElementById('ea-new-time').value || '10:00';
+  const newInstructorId = document.getElementById('ea-new-instructor').value || slot.instructorId;
   const now = new Date();
   const forOccDate = fmtDate(nextOccurrence(slot.day, slot.time, now));
-  slot.override = {active:true, day:newDay, time:newTime, forOccDate};
+  slot.override = {active:true, day:newDay, time:newTime, instructorId:newInstructorId, forOccDate};
   await saveMembers();
   closeAllPanels();
   renderScheduleGrid();
@@ -1111,7 +1151,9 @@ function openVirtualCancel(memberId, slotId){
   const slot = m && (m.schedule||[]).find(s=>s.id===slotId);
   if(!slot || !slot.override) return;
   vcContext = {memberId, slotId};
-  document.getElementById('vcSub').textContent = `${m.name} — ${slot.day} ${slot.time} dersi bu hafta için ${slot.override.day} ${slot.override.time} saatine taşındı.`;
+  const instChanged = slot.override.instructorId && slot.override.instructorId !== slot.instructorId;
+  const instTxt = instChanged ? ` ve ${getInstructorName(slot.override.instructorId)} hocaya` : '';
+  document.getElementById('vcSub').textContent = `${m.name} — ${slot.day} ${slot.time} dersi bu hafta için ${slot.override.day} ${slot.override.time} saatine${instTxt} taşındı.`;
   openPanel('virtualCancelPanel');
 }
 document.getElementById('vcCloseBtn').addEventListener('click', closeAllPanels);
@@ -1371,64 +1413,72 @@ document.querySelectorAll('#view-demoEvaluation .tab-btn').forEach(btn=>{
   });
 });
 
-/* ---------- GELİR / GİDER (maaş + gelir hesabı) ---------- */
-function primaryInstructorOf(m){
-  return (m.schedule && m.schedule[0]) ? m.schedule[0].instructorId : null;
-}
+/* ---------- GELİR / GİDER (ders bazlı maaş + gelir hesabı) ---------- */
 function renderFinance(){
   const monthInput = document.getElementById('finance-month');
   if(!monthInput.value) monthInput.value = todayStr().slice(0,7);
   const month = monthInput.value; // 'YYYY-MM'
 
-  let totalRevenue = 0;
-  let totalCommission = 0;
-  let perInstructor = {}; // instructorId -> {revenue, commission}
-  let unassignedRevenue = 0;
-
+  // Nakit bazlı tahsilat (bu ay yapılan ödemeler)
+  let totalCollected = 0;
   members.forEach(m=>{
-    const instId = primaryInstructorOf(m);
     (m.payments||[]).forEach(p=>{
-      if((p.date||'').slice(0,7) !== month) return;
-      const amount = Number(p.amount||0);
-      totalRevenue += amount;
-      if(!instId){ unassignedRevenue += amount; return; }
-      if(!perInstructor[instId]) perInstructor[instId] = {revenue:0, commission:0};
-      perInstructor[instId].revenue += amount;
-      const inst = instructors.find(i=>i.id===instId);
-      const pct = inst ? (m.isOwnMember ? (inst.ownMemberPrimPercent!=null?inst.ownMemberPrimPercent:0) : (inst.primPercent!=null?inst.primPercent:0)) : 0;
-      const commission = amount * (pct/100);
-      perInstructor[instId].commission += commission;
-      totalCommission += commission;
+      if((p.date||'').slice(0,7) === month) totalCollected += Number(p.amount||0);
     });
   });
 
-  const net = totalRevenue - totalCommission;
+  // Ders bazlı gerçekleşen gelir + hoca maaşı (bu ay içinde GEÇEN dersler üzerinden)
+  let totalLessonRevenue = 0;
+  let totalCommission = 0;
+  let perInstructor = {}; // instructorId -> {revenue, commission, lessonCount}
+  let unassignedRevenue = 0;
+  let unassignedLessons = 0;
+
+  lessonLog.forEach(l=>{
+    if((l.date||'').slice(0,7) !== month) return;
+    const amount = Number(l.amount||0);
+    totalLessonRevenue += amount;
+    if(!l.instructorId){ unassignedRevenue += amount; unassignedLessons += 1; return; }
+    if(!perInstructor[l.instructorId]) perInstructor[l.instructorId] = {revenue:0, commission:0, lessonCount:0};
+    perInstructor[l.instructorId].revenue += amount;
+    perInstructor[l.instructorId].lessonCount += 1;
+    const inst = instructors.find(i=>i.id===l.instructorId);
+    const pct = inst ? (l.isOwnMember ? (inst.ownMemberPrimPercent!=null?inst.ownMemberPrimPercent:0) : (inst.primPercent!=null?inst.primPercent:0)) : 0;
+    const commission = amount * (pct/100);
+    perInstructor[l.instructorId].commission += commission;
+    totalCommission += commission;
+  });
+
+  const net = totalCollected - totalCommission;
   document.getElementById('financeStats').innerHTML = `
-    <div class="stat"><div class="num clay">${totalRevenue.toLocaleString('tr-TR')}₺</div><div class="label">Toplam Gelir</div></div>
+    <div class="stat"><div class="num clay">${totalCollected.toLocaleString('tr-TR')}₺</div><div class="label">Bu Ay Tahsilat</div></div>
+    <div class="stat"><div class="num clay">${totalLessonRevenue.toLocaleString('tr-TR')}₺</div><div class="label">Gerçekleşen Ders Geliri</div></div>
     <div class="stat"><div class="num alert">${totalCommission.toLocaleString('tr-TR')}₺</div><div class="label">Toplam Maaş Gideri</div></div>
     <div class="stat"><div class="num">${net.toLocaleString('tr-TR')}₺</div><div class="label">Net</div></div>`;
 
-  let html = '<div class="list"><div class="row head" style="grid-template-columns:1.4fr 1fr 0.8fr 1fr;"><div>Hoca</div><div>Ciro (bu ay)</div><div>Prim %</div><div>Maaş (hesaplanan)</div></div>';
+  let html = '<div class="list"><div class="row head" style="grid-template-columns:1.2fr 1fr 0.8fr 0.8fr 1fr;"><div>Hoca</div><div>Ders Geliri (bu ay)</div><div>Prim %</div><div>Ders Sayısı</div><div>Maaş (hesaplanan)</div></div>';
   instructors.forEach(inst=>{
-    const data = perInstructor[inst.id] || {revenue:0, commission:0};
+    const data = perInstructor[inst.id] || {revenue:0, commission:0, lessonCount:0};
     const pctLabel = `${inst.primPercent!=null?inst.primPercent:'—'}% / ${inst.ownMemberPrimPercent!=null?inst.ownMemberPrimPercent:'—'}%`;
-    html += `<div class="row" style="grid-template-columns:1.4fr 1fr 0.8fr 1fr;">
+    html += `<div class="row" style="grid-template-columns:1.2fr 1fr 0.8fr 0.8fr 1fr;">
       <div class="m-name">${escapeHtml(inst.name)}</div>
       <div class="sessions">${data.revenue.toLocaleString('tr-TR')}₺</div>
       <div style="font-size:12px;color:var(--ink-soft);">${pctLabel}</div>
+      <div class="sessions">${data.lessonCount}</div>
       <div class="sessions" style="color:var(--alert);">${data.commission.toLocaleString('tr-TR')}₺</div>
     </div>`;
   });
   if(unassignedRevenue>0){
-    html += `<div class="row" style="grid-template-columns:1.4fr 1fr 0.8fr 1fr;">
-      <div class="m-name" style="color:var(--ink-soft);">Programı olmayan üyeler</div>
+    html += `<div class="row" style="grid-template-columns:1.2fr 1fr 0.8fr 0.8fr 1fr;">
+      <div class="m-name" style="color:var(--ink-soft);">Hocası belirsiz dersler</div>
       <div class="sessions">${unassignedRevenue.toLocaleString('tr-TR')}₺</div>
       <div style="font-size:12px;color:var(--ink-soft);">—</div>
+      <div class="sessions">${unassignedLessons}</div>
       <div class="sessions">—</div>
     </div>`;
   }
   html += '</div>';
-  html += '<p class="hint" style="margin-top:12px;">Prim %: "Genel / Kendi Üyesi" olarak gösterilir. Hocalar sekmesinden düzenlenir. Maaş, her üyenin bu ayki ödemesine, üyenin bağlı olduğu hocanın (üyenin ilk ders programındaki hoca) prim oranı uygulanarak hesaplanır.</p>';
+  html += '<p class="hint" style="margin-top:12px;">Ders geliri, üyenin ödediği paket ücretinin 8 seansa bölünmesiyle hesaplanır. Bir ders gerçekleşip seans düştüğünde geliri, o dersi veren hocaya (tek seferlik değişikliklerde o seans için seçilen hocaya) yazılır. Maaş, bu ders gelirine hocanın prim oranı ("Genel / Kendi Üyesi" — Hocalar sekmesinden düzenlenir) uygulanarak hesaplanır. Ders Sayısı, o ay hocanın fiilen işlediği ders adedidir. "Bu Ay Tahsilat" ise nakit bazlı, o ay alınan ödemelerin toplamıdır ve ders gelirinden farklı olabilir.</p>';
   document.getElementById('financeTable').innerHTML = html;
 }
 document.getElementById('finance-month').addEventListener('change', renderFinance);
