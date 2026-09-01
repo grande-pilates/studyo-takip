@@ -392,11 +392,15 @@ const PACKAGES = [
   {name:'Düet Reformer', price:7500, capacity:2},
   {name:'Grup Reformer', price:5000, capacity:4},
   {name:'Grup Reformer (Altın)', price:4000, capacity:4},
+  {name:'Grup (Multisport)', price:3800, capacity:4, displayLabel:'475₺/seans (Multisport)'},
 ];
 const PRICE_MAP = {}; const CAPACITY = {};
 PACKAGES.forEach(p=>{ PRICE_MAP[p.name]=p.price; CAPACITY[p.name]=p.capacity; });
 function packageOptionsHtml(selected){
-  return PACKAGES.map(p=>`<option value="${escapeHtml(p.name)}" ${p.name===selected?'selected':''}>${escapeHtml(p.name)} — ${p.price.toLocaleString('tr-TR')}₺</option>`).join('');
+  return PACKAGES.map(p=>{
+    const label = p.displayLabel ? p.displayLabel : `${p.price.toLocaleString('tr-TR')}₺`;
+    return `<option value="${escapeHtml(p.name)}" ${p.name===selected?'selected':''}>${escapeHtml(p.name)} — ${escapeHtml(label)}</option>`;
+  }).join('');
 }
 
 const DAY_ORDER = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
