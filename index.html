@@ -233,6 +233,16 @@
     <div id="reportsList"></div>
   </div>
 
+  <!-- HATIRLATMALAR (sadece sahibi) -->
+  <div class="view" id="view-reminders">
+    <p class="hint" style="margin-bottom:14px;">Bugünün gününe tıklarsanız, <b>bir sonraki gün</b>ün tüm derslerine WhatsApp hatırlatma mesajı hazırlanır. "Tümünü Gönder" sırayla her üye için WhatsApp'ı mesaj hazır şekilde açar; siz sadece "Gönder"e basıp sekmeye dönüp "Sıradaki"ne basarsınız.</p>
+    <div class="controls">
+      <div id="reminderDayButtons" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <div id="reminderQueueBar" style="margin:14px 0;"></div>
+    <div id="reminderList"></div>
+  </div>
+
   <!-- HOCALAR (sadece sahibi) -->
   <div class="view" id="view-instructorsMgmt">
     <div class="controls">
@@ -390,12 +400,16 @@ const PACKAGES = [
   {name:'Bireysel Reformer', price:11000, capacity:1},
   {name:'Düet Reformer (Altın)', price:6500, capacity:2},
   {name:'Düet Reformer', price:7500, capacity:2},
-  {name:'Grup Reformer', price:5000, capacity:4},
-  {name:'Grup Reformer (Altın)', price:4000, capacity:4},
-  {name:'Grup (Multisport)', price:3800, capacity:4, displayLabel:'475₺/seans (Multisport)'},
+  {name:'Grup Reformer', price:5000, capacity:4, group:'grup'},
+  {name:'Grup Reformer (Altın)', price:4000, capacity:4, group:'grup'},
+  {name:'Grup (Multisport)', price:3800, capacity:4, displayLabel:'475₺/seans (Multisport)', group:'grup'},
 ];
 const PRICE_MAP = {}; const CAPACITY = {};
 PACKAGES.forEach(p=>{ PRICE_MAP[p.name]=p.price; CAPACITY[p.name]=p.capacity; });
+function groupOf(type){
+  const p = PACKAGES.find(x=>x.name===type);
+  return (p && p.group) ? p.group : type;
+}
 function packageOptionsHtml(selected){
   return PACKAGES.map(p=>{
     const label = p.displayLabel ? p.displayLabel : `${p.price.toLocaleString('tr-TR')}₺`;
@@ -413,6 +427,12 @@ let demos = [];
 let demoLog = [];
 let monthlyReports = [];
 let lessonLog = [];
+let reminderLog = [];
+let selectedReminderRefDay = null;
+let reminderTargetDayName = null;
+let reminderTargetDate = null;
+let reminderQueue = [];
+let reminderQueueIndex = 0;
 let editingId = null;
 let paymentForId = null;
 let convertingDemoId = null;
@@ -492,7 +512,7 @@ function showApp(){
 function buildTabs(){
   const tabs = role==='hoca'
     ? [{id:'schedule',label:'Ders Programı'},{id:'demoSchedule',label:'Demo Programı'},{id:'members',label:'Üyeler'}]
-    : [{id:'members',label:'Üyeler'},{id:'schedule',label:'Ders Programı'},{id:'demoSchedule',label:'Demo Programı'},{id:'demoEvaluation',label:'Demo Değerlendirme'},{id:'finance',label:'Gelir/Gider'},{id:'reports',label:'Raporlar'},{id:'instructorsMgmt',label:'Hocalar'}];
+    : [{id:'members',label:'Üyeler'},{id:'schedule',label:'Ders Programı'},{id:'demoSchedule',label:'Demo Programı'},{id:'demoEvaluation',label:'Demo Değerlendirme'},{id:'finance',label:'Gelir/Gider'},{id:'reports',label:'Raporlar'},{id:'reminders',label:'Hatırlatmalar'},{id:'instructorsMgmt',label:'Hocalar'}];
   const wrap = document.getElementById('tabsRow');
   wrap.innerHTML = tabs.map((t,i)=>`<button class="tab-btn ${i===0?'on':''}" data-view="${t.id}">${t.label}</button>`).join('');
   currentTab = tabs[0].id;
@@ -511,6 +531,7 @@ function buildTabs(){
       if(currentTab==='demoEvaluation') renderDemoEvaluation();
       if(currentTab==='finance') renderFinance();
       if(currentTab==='reports') renderReports();
+      if(currentTab==='reminders') renderReminders();
       if(currentTab==='members') render();
     });
   });
@@ -532,6 +553,7 @@ async function loadAll(){
   try{ demoLog = JSON.parse(await supaGet('demoLog') || '[]'); }catch(e){ demoLog = []; }
   try{ lessonLog = JSON.parse(await supaGet('lessonLog') || '[]'); }catch(e){ lessonLog = []; }
   try{ monthlyReports = JSON.parse(await supaGet('monthlyReports') || '[]'); }catch(e){ monthlyReports = []; }
+  try{ reminderLog = JSON.parse(await supaGet('reminderLog') || '[]'); }catch(e){ reminderLog = []; }
 
   processSchedules();
   renderStats();
@@ -544,6 +566,7 @@ async function loadAll(){
   if(currentTab==='demoEvaluation') renderDemoEvaluation();
   if(currentTab==='finance') renderFinance();
   if(currentTab==='reports') renderReports();
+  if(currentTab==='reminders') renderReminders();
 }
 async function saveMembers(){ await supaSet('members', JSON.stringify(members)); }
 async function saveInstructors(){ await supaSet('instructors', JSON.stringify(instructors)); }
@@ -551,6 +574,7 @@ async function saveDemos(){ await supaSet('demos', JSON.stringify(demos)); }
 async function saveDemoLog(){ await supaSet('demoLog', JSON.stringify(demoLog)); }
 async function saveLessonLog(){ await supaSet('lessonLog', JSON.stringify(lessonLog)); }
 async function saveMonthlyReports(){ await supaSet('monthlyReports', JSON.stringify(monthlyReports)); }
+async function saveReminderLog(){ await supaSet('reminderLog', JSON.stringify(reminderLog)); }
 
 /* ---------- OTOMATİK SEANS DÜŞME + TEK SEFERLİK DEĞİŞİKLİK ---------- */
 function mostRecentOccurrence(dayName, timeStr, now){
@@ -833,13 +857,14 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   for(const slot of schedule){
     const occupants = getSlotOccupants(slot.day, slot.time, slot.instructorId, editingId);
     const cap = CAPACITY[type] || 1;
-    const existingType = occupants.length ? occupants[0].type : null;
-    if(existingType && existingType !== type){
-      alert(`${getInstructorName(slot.instructorId)} · ${slot.day} ${slot.time} saatinde zaten "${existingType}" dersi var. Bu saate "${type}" olarak eklenemez.`);
+    const typeGroup = groupOf(type);
+    const conflictingOccupant = occupants.find(o => groupOf(o.type) !== typeGroup);
+    if(conflictingOccupant){
+      alert(`${getInstructorName(slot.instructorId)} · ${slot.day} ${slot.time} saatinde zaten "${conflictingOccupant.type}" dersi var. Bu saate "${type}" olarak eklenemez.`);
       return;
     }
     if(occupants.length + 1 > cap){
-      alert(`${getInstructorName(slot.instructorId)} · ${slot.day} ${slot.time} dersi dolu (${cap} kişilik "${type}" kontenjanı doldu).`);
+      alert(`${getInstructorName(slot.instructorId)} · ${slot.day} ${slot.time} dersi dolu (${cap} kişilik kontenjan doldu).`);
       return;
     }
   }
@@ -1790,6 +1815,169 @@ async function deleteReport(reportId){
   await saveMonthlyReports();
   renderReports();
 }
+
+/* ---------- HATIRLATMALAR (WhatsApp) ---------- */
+function nextOccurrenceOfWeekday(dayName, now){
+  const targetDow = JS_DOW.indexOf(dayName);
+  let d = new Date(now);
+  d.setHours(0,0,0,0);
+  let diff = (targetDow - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+function reminderMessageFor(timeStr){
+  const timeDot = (timeStr||'').replace(':','.');
+  return `Merhabalar🌸\nYarın saat ${timeDot}’de Reformer dersiniz var.\nSağlıklı günler dileriz 🙏🏻🌸.`;
+}
+function normalizePhoneForWa(phone){
+  let digits = (phone||'').replace(/\D/g,'');
+  if(!digits) return '';
+  if(digits.startsWith('0')) digits = digits.slice(1);
+  if(digits.startsWith('90')) return digits;
+  if(digits.length===10) return '90'+digits;
+  return digits;
+}
+function buildWaLink(item){
+  const phoneDigits = normalizePhoneForWa(item.phone);
+  const text = encodeURIComponent(reminderMessageFor(item.time));
+  return `https://wa.me/${phoneDigits}?text=${text}`;
+}
+function reminderKey(it){ return it.slotId+'|'+it.occDate; }
+
+// Belirli bir takvim tarihi + gün adı için o güne denk gelen tüm dersleri
+// (tek seferlik taşımalar dahil) bulur.
+function getLessonsForDate(targetDateStr, targetDayName){
+  let list = [];
+  members.forEach(m=>{
+    (m.schedule||[]).forEach(slot=>{
+      if(slot.day === targetDayName){
+        const movedAway = slot.override && slot.override.active && slot.override.forOccDate === targetDateStr;
+        if(!movedAway){
+          list.push({memberId:m.id, memberName:m.name, phone:m.phone, time:slot.time, instructorId:slot.instructorId, slotId:slot.id, occDate:targetDateStr});
+        }
+      }
+      if(slot.override && slot.override.active){
+        const actualDate = fmtDate(dateForDayInWeek(new Date(slot.override.forOccDate+'T00:00:00'), slot.override.day));
+        if(actualDate === targetDateStr){
+          list.push({memberId:m.id, memberName:m.name, phone:m.phone, time:slot.override.time, instructorId: slot.override.instructorId||slot.instructorId, slotId:slot.id, occDate:targetDateStr, moved:true});
+        }
+      }
+    });
+  });
+  list.sort((a,b)=> a.time.localeCompare(b.time));
+  return list;
+}
+
+function renderReminders(){
+  const wrap = document.getElementById('reminderDayButtons');
+  wrap.innerHTML = DAY_ORDER.map(d=>`<button class="filter-chip ${selectedReminderRefDay===d?'on':''}" data-day="${d}">${d}</button>`).join('');
+  wrap.querySelectorAll('.filter-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      selectedReminderRefDay = btn.dataset.day;
+      const idx = DAY_ORDER.indexOf(selectedReminderRefDay);
+      reminderTargetDayName = DAY_ORDER[(idx+1)%DAY_ORDER.length];
+      reminderTargetDate = fmtDate(nextOccurrenceOfWeekday(reminderTargetDayName, new Date()));
+      reminderQueue = []; reminderQueueIndex = 0;
+      renderReminders();
+    });
+  });
+  renderReminderQueueBar();
+  renderReminderList();
+}
+
+function renderReminderQueueBar(){
+  const bar = document.getElementById('reminderQueueBar');
+  if(!reminderTargetDate){ bar.innerHTML=''; return; }
+  const pending = computeReminderList().filter(it=>!reminderLog.includes(reminderKey(it)));
+  if(reminderQueueIndex>0 && reminderQueueIndex<reminderQueue.length){
+    const next = reminderQueue[reminderQueueIndex];
+    bar.innerHTML = `<button class="btn-add" id="reminderQueueBtn">Sıradaki ▶ (${escapeHtml(next.memberName)}, kaldı ${reminderQueue.length-reminderQueueIndex})</button>`;
+  } else if(reminderQueueIndex>0 && reminderQueueIndex>=reminderQueue.length){
+    bar.innerHTML = `<span style="color:var(--sage-dark);font-weight:600;">✓ Sıradaki liste tamamlandı (${reminderQueue.length} kişi).</span>`;
+  } else if(pending.length>0){
+    bar.innerHTML = `<button class="btn-add" id="reminderQueueBtn">Tümünü Gönder (Sırayla) — ${pending.length} kişi</button>`;
+  } else {
+    bar.innerHTML = '';
+  }
+  const btn = document.getElementById('reminderQueueBtn');
+  if(btn){
+    btn.addEventListener('click', ()=>{
+      if(reminderQueue.length===0){
+        reminderQueue = computeReminderList().filter(it=>!reminderLog.includes(reminderKey(it)));
+        reminderQueueIndex = 0;
+      }
+      reminderQueueStep();
+    });
+  }
+}
+
+async function reminderQueueStep(){
+  if(reminderQueueIndex >= reminderQueue.length) return;
+  const item = reminderQueue[reminderQueueIndex];
+  window.open(buildWaLink(item), '_blank');
+  if(!reminderLog.includes(reminderKey(item))){
+    reminderLog.push(reminderKey(item));
+    await saveReminderLog();
+  }
+  reminderQueueIndex += 1;
+  renderReminderQueueBar();
+  renderReminderList();
+}
+
+function computeReminderList(){
+  if(!reminderTargetDate) return [];
+  return getLessonsForDate(reminderTargetDate, reminderTargetDayName).filter(l=>l.phone);
+}
+
+function renderReminderList(){
+  const listWrap = document.getElementById('reminderList');
+  if(!reminderTargetDate){
+    listWrap.innerHTML = '<div class="empty"><div class="big">Bir gün seçin</div>Örn. bugün Salı ise "Salı" butonuna basarsanız, Çarşamba günkü tüm derslerin hatırlatmaları hazırlanır.</div>';
+    return;
+  }
+  const allForDate = getLessonsForDate(reminderTargetDate, reminderTargetDayName);
+  const items = allForDate.filter(l=>l.phone);
+  const noPhone = allForDate.filter(l=>!l.phone);
+  const dLabel = reminderTargetDate.slice(8,10)+'.'+reminderTargetDate.slice(5,7)+'.'+reminderTargetDate.slice(0,4);
+  let html = `<p class="hint" style="margin-bottom:14px;">${escapeHtml(reminderTargetDayName)} (${dLabel}) günü için ${allForDate.length} ders bulundu.</p>`;
+  if(items.length===0){
+    html += '<div class="empty"><div class="big">Bu gün için ders yok</div></div>';
+  } else {
+    html += '<div class="list">';
+    items.forEach(it=>{
+      const sent = reminderLog.includes(reminderKey(it));
+      html += `<div class="row" style="grid-template-columns:1fr 0.7fr 1fr auto;">
+        <div class="m-name">${escapeHtml(it.memberName)}</div>
+        <div class="sessions">${escapeHtml(it.time)}</div>
+        <div style="font-size:12.5px;color:var(--ink-soft);">${escapeHtml(getInstructorName(it.instructorId))}</div>
+        <div class="row-actions">
+          ${sent?'<span style="color:var(--sage-dark);font-size:12px;font-weight:600;">✓ Gönderildi</span>':''}
+          <button class="icon-btn" data-role="reminder-send" data-slot-id="${it.slotId}" data-occ-date="${it.occDate}">WhatsApp'ta Gönder</button>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  if(noPhone.length>0){
+    html += `<p class="hint" style="margin-top:14px;color:var(--alert);">Telefon numarası olmadığı için hatırlatma gönderilemeyecek: ${noPhone.map(x=>escapeHtml(x.memberName)).join(', ')}</p>`;
+  }
+  listWrap.innerHTML = html;
+}
+document.getElementById('reminderList').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-role="reminder-send"]');
+  if(!btn) return;
+  const slotId = btn.dataset.slotId, occDate = btn.dataset.occDate;
+  const item = computeReminderList().find(it=>it.slotId===slotId && it.occDate===occDate);
+  if(!item) return;
+  window.open(buildWaLink(item), '_blank');
+  const k = reminderKey(item);
+  if(!reminderLog.includes(k)){
+    reminderLog.push(k);
+    await saveReminderLog();
+  }
+  renderReminderList();
+  renderReminderQueueBar();
+});
 
 initRole();
 </script>
