@@ -1827,7 +1827,7 @@ function nextOccurrenceOfWeekday(dayName, now){
 }
 function reminderMessageFor(timeStr){
   const timeDot = (timeStr||'').replace(':','.');
-  return `Merhabalar🌸\nYarın saat ${timeDot}’de Reformer dersiniz var.\nSağlıklı günler dileriz 🙏🏻🌸.`;
+  return `Merhabalar🌸\nYarın saat ${timeDot}’de Reformer dersiniz var.\nSağlıklı günler dileriz 🙏🌸.`;
 }
 function normalizePhoneForWa(phone){
   let digits = (phone||'').replace(/\D/g,'');
@@ -1840,7 +1840,7 @@ function normalizePhoneForWa(phone){
 function buildWaLink(item){
   const phoneDigits = normalizePhoneForWa(item.phone);
   const text = encodeURIComponent(reminderMessageFor(item.time));
-  return `https://wa.me/${phoneDigits}?text=${text}`;
+  return `https://api.whatsapp.com/send?phone=${phoneDigits}&text=${text}`;
 }
 function reminderKey(it){ return it.slotId+'|'+it.occDate; }
 
