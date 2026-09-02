@@ -36,8 +36,9 @@
 
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;}
 
-  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:22px;}
-  .tab-btn{padding:10px 4px;margin-right:20px;background:none;border:none;font-family:'Inter',sans-serif;font-size:15px;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:22px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab-btn{padding:10px 4px;margin-right:20px;background:none;border:none;font-family:'Inter',sans-serif;font-size:15px;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;flex:none;}
   .tab-btn.on{color:var(--ink);border-bottom-color:var(--sage);font-weight:600;}
   .view{display:none;}
   .view.on{display:block;}
@@ -144,7 +145,8 @@
     .panel{padding:22px 18px;width:100%;max-width:100%;}
     .toolbar{gap:8px;}
     .toolbar .btn-add, .toolbar .btn-ghost{flex:1 1 auto;min-width:150px;text-align:center;}
-    .tab-btn{font-size:14px;margin-right:14px;}
+    .tab-btn{font-size:13.5px;margin-right:16px;padding:10px 2px;}
+    .tabs{margin-bottom:18px;margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px;}
     .icon-btn{padding:9px 12px;font-size:13px;}
   }
 </style>
@@ -522,6 +524,7 @@ function buildTabs(){
     btn.addEventListener('click', ()=>{
       wrap.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
       btn.classList.add('on');
+      btn.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
       currentTab = btn.dataset.view;
       document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
       document.getElementById('view-'+currentTab).classList.add('on');
@@ -1827,7 +1830,7 @@ function nextOccurrenceOfWeekday(dayName, now){
 }
 function reminderMessageFor(timeStr){
   const timeDot = (timeStr||'').replace(':','.');
-  return `Merhabalar🌸\nYarın saat ${timeDot}’de Reformer dersiniz var.\nSağlıklı günler dileriz 🙏🌸.`;
+  return `Merhabalar\nYarın saat ${timeDot}'de Reformer dersiniz var.\nSağlıklı günler dileriz.`;
 }
 function normalizePhoneForWa(phone){
   let digits = (phone||'').replace(/\D/g,'');
