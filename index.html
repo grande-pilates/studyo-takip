@@ -2,7 +2,8 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="format-detection" content="telephone=no">
 <title>Stüdyo Takip</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -20,7 +21,7 @@
   *{box-sizing:border-box;}
   html, body{overflow-x:hidden;max-width:100%;}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
-  .wrap{max-width:1120px;margin:0 auto;padding:40px 28px 80px;}
+  .wrap{max-width:1120px;margin:0 auto;padding:40px 28px 80px;overflow-x:hidden;}
 
   header.top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:20px;gap:20px;flex-wrap:wrap;}
   .logo-img{width:64px;height:64px;object-fit:contain;flex:none;}
@@ -78,7 +79,7 @@
   .empty{text-align:center;padding:60px 20px;color:var(--ink-soft);}
   .empty .big{font-family:'Fraunces',serif;font-size:20px;color:var(--ink);margin-bottom:6px;}
 
-  .sched-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);-webkit-overflow-scrolling:touch;}
+  .sched-table-wrap{overflow-x:auto;max-width:100%;border:1px solid var(--line);border-radius:10px;background:var(--panel);-webkit-overflow-scrolling:touch;}
   table.sched-table{border-collapse:collapse;width:100%;min-width:820px;}
   table.sched-table th, table.sched-table td{border:1px solid var(--line);padding:0;}
   table.sched-table thead th{background:var(--sage-soft);color:var(--sage-dark);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;padding:10px 8px;text-align:center;}
@@ -95,6 +96,9 @@
   .cell-entry.moved .en-name{color:var(--gray);text-decoration:line-through;}
   .cell-entry.virtual{background:var(--clay-soft);}
   .cell-entry.virtual .en-name{color:var(--clay);}
+  .cell-entry.postponed{background:var(--gray-soft);opacity:0.65;}
+  .cell-entry.postponed .en-name{color:var(--gray);text-decoration:line-through;}
+  .cell-entry.postponed .en-meta{color:var(--gray);}
   table.sched-table td.cell-full{background:#3B3A34;}
   table.sched-table td.cell-full .en-meta{color:#C9C7BE;}
   table.sched-table td.cell-partial{background:var(--partial-soft);}
@@ -379,13 +383,15 @@
   <div class="panel-actions"><button class="btn-secondary" style="flex:1;" id="demoCellCloseBtn">Kapat</button></div>
 </div>
 
-<!-- IZGARA HÜCRE AKSİYON PANELİ (Dondur / Tek Seferlik Değişiklik) -->
+<!-- IZGARA HÜCRE AKSİYON PANELİ (Dondur / Tek Seferlik Değişiklik / Erteleme) -->
 <div class="panel" id="entryActionPanel">
   <h2 id="entryActionTitle">İşlem Seç</h2>
   <p class="studio-sub" id="entryActionSub" style="margin-bottom:20px;"></p>
   <div id="entryActionMenu">
     <button class="action-menu-btn" id="eaFreezeBtn">❄️ Dondur</button>
     <button class="action-menu-btn" id="eaChangeBtn">🔁 Tek Seferlik Değişiklik</button>
+    <button class="action-menu-btn" id="eaPostponeBtn">⏸️ Erteleme Hakkını Kullan</button>
+    <div class="hint" style="margin-top:-4px;margin-bottom:14px;">Bu seans gri ve üstü çizili görünür, seanstan düşülmez ve hoca maaşına yazılmaz.</div>
   </div>
   <div id="entryChangeForm" style="display:none;">
     <div class="field"><label>Yeni Gün</label><select id="ea-new-day"></select></div>
@@ -405,7 +411,7 @@
 
 <!-- SANAL (TAŞINAN) GİRDİ İPTAL PANELİ -->
 <div class="panel" id="virtualCancelPanel">
-  <h2>Tek Seferlik Değişiklik</h2>
+  <h2 id="vcTitle">Tek Seferlik Değişiklik</h2>
   <p class="studio-sub" id="vcSub" style="margin-bottom:20px;"></p>
   <div class="panel-actions">
     <button class="btn-secondary" id="vcCloseBtn">Kapat</button>
@@ -658,12 +664,15 @@ function processSchedules(){
       const occ = mostRecentOccurrence(slot.day, slot.time, now);
       const occStr = fmtDate(occ);
       const hasActiveOverrideForThisOcc = slot.override && slot.override.active && slot.override.forOccDate === occStr;
+      const isPostponed = slot.postponedOccDate === occStr;
       if(!hasActiveOverrideForThisOcc && occStr > (slot.lastDeductedDate || '')){
-        const isFrozen = m.frozenUntil && occStr <= m.frozenUntil;
-        if(!isFrozen && m.remaining>0){
-          m.remaining -= 1;
-          logLesson(m, slot.instructorId, occStr);
-          logChanged = true;
+        if(!isPostponed){
+          const isFrozen = m.frozenUntil && occStr <= m.frozenUntil;
+          if(!isFrozen && m.remaining>0){
+            m.remaining -= 1;
+            logLesson(m, slot.instructorId, occStr);
+            logChanged = true;
+          }
         }
         slot.lastDeductedDate = occStr;
         changed = true;
@@ -784,6 +793,7 @@ function addSlotRow(slot){
   wrap.dataset.slotId = slot.id;
   wrap.dataset.lastDeducted = slot.lastDeductedDate||'';
   wrap.dataset.override = slot.override ? JSON.stringify(slot.override) : '';
+  wrap.dataset.postponed = slot.postponedOccDate || '';
   wrap.innerHTML = `
     <div class="schedule-slot-row">
       <select class="slot-day">${DAY_ORDER.map(d=>`<option ${d===slot.day?'selected':''}>${d}</option>`).join('')}</select>
@@ -836,6 +846,7 @@ function readSlotRows(){
     if(wrap.dataset.override){
       try{ result.override = JSON.parse(wrap.dataset.override); }catch(e){}
     }
+    if(wrap.dataset.postponed){ result.postponedOccDate = wrap.dataset.postponed; }
     return result;
   });
 }
@@ -1228,9 +1239,10 @@ function renderScheduleGrid(){
     (m.schedule||[]).forEach(slot=>{
       const nextStr = fmtDate(nextOccurrence(slot.day, slot.time, now));
       const hasMove = slot.override && slot.override.active && slot.override.forOccDate === nextStr;
+      const isPostponed = slot.postponedOccDate === nextStr;
       const isFrozenNow = m.frozenUntil && todayStr() <= m.frozenUntil;
       if(currentInstructorFilter==='all' || slot.instructorId===currentInstructorFilter){
-        pushEntry(slot.day, slot.time, {memberId:m.id, memberName:m.name, type:m.type, instructorId:slot.instructorId, slotId:slot.id, frozen:isFrozenNow, moved:hasMove});
+        pushEntry(slot.day, slot.time, {memberId:m.id, memberName:m.name, type:m.type, instructorId:slot.instructorId, slotId:slot.id, frozen:isFrozenNow, moved:hasMove, postponed:isPostponed});
       }
       if(hasMove){
         const virtInstructorId = slot.override.instructorId || slot.instructorId;
@@ -1249,9 +1261,10 @@ function renderScheduleGrid(){
       const entries = cellEntries[key(day,t)] || [];
       tbody += `<td class="slot-cell">`;
       entries.forEach(e=>{
-        const cls = e.frozen ? 'frozen' : (e.moved ? 'moved' : (e.virtual ? 'virtual' : ''));
-        const tag = e.virtual ? ' (tek seferlik)' : (e.moved ? ' (taşındı)' : '');
-        tbody += `<div class="cell-entry ${cls}" data-role="${e.virtual?'sched-virtual':'sched-entry'}" data-member-id="${e.memberId}" data-slot-id="${e.slotId}">
+        const cls = e.postponed ? 'postponed' : (e.frozen ? 'frozen' : (e.moved ? 'moved' : (e.virtual ? 'virtual' : '')));
+        const role = e.postponed ? 'sched-postponed' : (e.virtual ? 'sched-virtual' : 'sched-entry');
+        const tag = e.postponed ? ' (ertelendi)' : (e.virtual ? ' (tek seferlik)' : (e.moved ? ' (taşındı)' : ''));
+        tbody += `<div class="cell-entry ${cls}" data-role="${role}" data-member-id="${e.memberId}" data-slot-id="${e.slotId}">
           <div class="en-name">${escapeHtml(e.memberName)}${tag}</div>
           <div class="en-meta">${escapeHtml(e.type)}${currentInstructorFilter==='all'?' · '+escapeHtml(getInstructorName(e.instructorId)):''}</div>
         </div>`;
@@ -1264,10 +1277,12 @@ function renderScheduleGrid(){
   table.innerHTML = thead+tbody;
 }
 
-/* ---------- HÜCRE AKSİYON MENÜSÜ (Dondur / Tek Seferlik Değişiklik) ---------- */
+/* ---------- HÜCRE AKSİYON MENÜSÜ (Dondur / Tek Seferlik Değişiklik / Erteleme) ---------- */
 document.getElementById('schedTable').addEventListener('click', (e)=>{
   const virtualEntry = e.target.closest('.cell-entry[data-role="sched-virtual"]');
   if(virtualEntry){ openVirtualCancel(virtualEntry.dataset.memberId, virtualEntry.dataset.slotId); return; }
+  const postponedEntry = e.target.closest('.cell-entry[data-role="sched-postponed"]');
+  if(postponedEntry){ openPostponeCancel(postponedEntry.dataset.memberId, postponedEntry.dataset.slotId); return; }
   const entry = e.target.closest('.cell-entry[data-role="sched-entry"]');
   if(entry){ openEntryAction(entry.dataset.memberId, entry.dataset.slotId); return; }
 });
@@ -1286,6 +1301,19 @@ function openEntryAction(memberId, slotId){
 document.getElementById('entryActionCloseBtn').addEventListener('click', closeAllPanels);
 document.getElementById('eaFreezeBtn').addEventListener('click', ()=>{
   const ctx = eaContext; closeAllPanels(); if(ctx) openFreezePanelFor(ctx.memberId);
+});
+document.getElementById('eaPostponeBtn').addEventListener('click', async ()=>{
+  if(!eaContext) return;
+  const m = members.find(x=>x.id===eaContext.memberId);
+  const slot = m && (m.schedule||[]).find(s=>s.id===eaContext.slotId);
+  if(!slot) return;
+  const now = new Date();
+  const nextStr = fmtDate(nextOccurrence(slot.day, slot.time, now));
+  if(!confirm(`${m.name} — ${slot.day} ${slot.time} dersi için erteleme hakkı kullanılsın mı? Bu seans gri/üstü çizili görünecek, seanstan düşülmeyecek ve maaş hesabına katılmayacak.`)) return;
+  slot.postponedOccDate = nextStr;
+  await saveMembers();
+  closeAllPanels();
+  renderScheduleGrid();
 });
 document.getElementById('eaChangeBtn').addEventListener('click', ()=>{
   document.getElementById('entryActionMenu').style.display = 'none';
@@ -1314,14 +1342,29 @@ document.getElementById('eaChangeConfirm').addEventListener('click', async ()=>{
   closeAllPanels();
   renderScheduleGrid();
 });
+let vcMode = 'override';
 function openVirtualCancel(memberId, slotId){
   const m = members.find(x=>x.id===memberId);
   const slot = m && (m.schedule||[]).find(s=>s.id===slotId);
   if(!slot || !slot.override) return;
   vcContext = {memberId, slotId};
+  vcMode = 'override';
   const instChanged = slot.override.instructorId && slot.override.instructorId !== slot.instructorId;
   const instTxt = instChanged ? ` ve ${getInstructorName(slot.override.instructorId)} hocaya` : '';
+  document.getElementById('vcTitle').textContent = 'Tek Seferlik Değişiklik';
   document.getElementById('vcSub').textContent = `${m.name} — ${slot.day} ${slot.time} dersi bu hafta için ${slot.override.day} ${slot.override.time} saatine${instTxt} taşındı.`;
+  document.getElementById('vcCancelBtn').textContent = 'Değişikliği İptal Et';
+  openPanel('virtualCancelPanel');
+}
+function openPostponeCancel(memberId, slotId){
+  const m = members.find(x=>x.id===memberId);
+  const slot = m && (m.schedule||[]).find(s=>s.id===slotId);
+  if(!slot || !slot.postponedOccDate) return;
+  vcContext = {memberId, slotId};
+  vcMode = 'postpone';
+  document.getElementById('vcTitle').textContent = 'Erteleme Hakkı Kullanıldı';
+  document.getElementById('vcSub').textContent = `${m.name} — ${slot.day} ${slot.time} dersi bu hafta için ertelendi. Seanstan düşülmedi ve maaşa yazılmadı.`;
+  document.getElementById('vcCancelBtn').textContent = 'Erteleme Hakkını Geri Al';
   openPanel('virtualCancelPanel');
 }
 document.getElementById('vcCloseBtn').addEventListener('click', closeAllPanels);
@@ -1329,7 +1372,10 @@ document.getElementById('vcCancelBtn').addEventListener('click', async ()=>{
   if(!vcContext) return;
   const m = members.find(x=>x.id===vcContext.memberId);
   const slot = m && (m.schedule||[]).find(s=>s.id===vcContext.slotId);
-  if(slot && slot.override) slot.override.active = false;
+  if(slot){
+    if(vcMode==='postpone'){ delete slot.postponedOccDate; }
+    else if(slot.override){ slot.override.active = false; }
+  }
   await saveMembers();
   closeAllPanels();
   renderScheduleGrid();
