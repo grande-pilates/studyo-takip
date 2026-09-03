@@ -78,6 +78,7 @@
   .empty .big{font-family:'Fraunces',serif;font-size:20px;color:var(--ink);margin-bottom:6px;}
 
   .sched-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);-webkit-overflow-scrolling:touch;}
+  .zoom-sizer{display:block;width:100%;}
   table.sched-table{border-collapse:collapse;width:100%;min-width:820px;}
   table.sched-table th, table.sched-table td{border:1px solid var(--line);padding:0;}
   table.sched-table thead th{background:var(--sage-soft);color:var(--sage-dark);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;padding:10px 8px;text-align:center;}
@@ -148,6 +149,15 @@
     .tab-btn{font-size:13.5px;margin-right:16px;padding:10px 2px;}
     .tabs{margin-bottom:18px;margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px;}
     .icon-btn{padding:9px 12px;font-size:13px;}
+    table.sched-table{min-width:640px;}
+    table.sched-table td.slot-cell{min-width:82px;padding:3px;}
+    table.sched-table thead th{font-size:10.5px;padding:7px 4px;}
+    table.sched-table td.time-cell{font-size:10.5px;padding:7px 6px;}
+    .cell-entry{padding:5px 5px;font-size:9.5px;line-height:1.25;margin-bottom:3px;border-radius:4px;}
+    .cell-entry .en-name{font-size:9.5px;}
+    .cell-entry .en-meta{display:none;}
+    .cell-busy-label{font-size:8.5px;}
+    .sched-table-wrap{touch-action:pan-x pan-y;}
   }
 </style>
 </head>
@@ -193,7 +203,7 @@
     <div class="controls">
       <div id="instructorTabs" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
     </div>
-    <div class="sched-table-wrap"><table class="sched-table" id="schedTable"></table></div>
+    <div class="sched-table-wrap" id="schedTableWrap"><div class="zoom-sizer" id="schedZoomSizer"><table class="sched-table" id="schedTable"></table></div></div>
   </div>
 
   <!-- DEMO PROGRAMI -->
@@ -201,7 +211,7 @@
     <div class="controls">
       <div id="demoInstructorTabs" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
     </div>
-    <div class="sched-table-wrap"><table class="sched-table" id="demoTable"></table></div>
+    <div class="sched-table-wrap" id="demoTableWrap"><div class="zoom-sizer" id="demoZoomSizer"><table class="sched-table" id="demoTable"></table></div></div>
   </div>
 
   <!-- DEMO DEĞERLENDİRME (sadece sahibi) -->
@@ -266,9 +276,20 @@
     <select id="f-type"></select>
     <div class="hint">Kontenjan: Bireysel 1, Düet 2, Grup 4 kişi. Tüm paketler 8 seans.</div>
   </div>
-  <div class="field" id="f-fee-wrap"><label>Ücret (₺)</label><input id="f-fee" type="number" min="0" /></div>
-  <div class="field"><label>Kalan Seans</label><input id="f-remaining" type="number" min="0" max="8" placeholder="8" /></div>
+  <div class="field" id="f-fee-wrap">
+    <label id="f-fee-label">Ücret (₺)</label>
+    <input id="f-fee" type="number" min="0" />
+    <div class="hint" id="f-fee-hint"></div>
+  </div>
   <div class="field"><label>Başlangıç Tarihi</label><input id="f-start" type="date" /></div>
+  <div class="field">
+    <label>Kalan Seans</label>
+    <div style="display:flex;gap:8px;">
+      <input id="f-remaining" type="number" min="0" max="8" placeholder="8" style="flex:1;" />
+      <button type="button" class="btn-ghost" id="recalcRemainingBtn" style="white-space:nowrap;">Başlangıca Göre Hesapla</button>
+    </div>
+    <div class="hint">Başlangıç tarihinden bugüne kadar, haftalık ders programına göre kaç seansın geçtiğini hesaplayıp kalanı otomatik doldurur.</div>
+  </div>
   <div class="field">
     <label>Haftalık Ders Programı</label>
     <div id="f-schedule-list"></div>
@@ -297,6 +318,15 @@
   <div class="panel-actions">
     <button class="btn-secondary" id="paymentCancelBtn">Vazgeç</button>
     <button class="btn-primary" id="paymentSaveBtn">Kaydet</button>
+  </div>
+</div>
+
+<!-- ÜYE GEÇMİŞİ / DETAY PANELİ -->
+<div class="panel" id="historyPanel" style="width:460px;">
+  <h2 id="historyTitle">Üye Geçmişi</h2>
+  <div id="historyBody"></div>
+  <div class="panel-actions">
+    <button class="btn-secondary" style="flex:1;" id="historyCloseBtn">Kapat</button>
   </div>
 </div>
 
@@ -450,7 +480,7 @@ let demoCellContextId = null;
 
 const listArea = document.getElementById('listArea');
 const overlay = document.getElementById('overlay');
-const ALL_PANEL_IDS = ['panel','paymentPanel','freezePanel','demoAddPanel','entryActionPanel','virtualCancelPanel','adminLoginPanel','demoCellActionPanel'];
+const ALL_PANEL_IDS = ['panel','paymentPanel','freezePanel','demoAddPanel','entryActionPanel','virtualCancelPanel','adminLoginPanel','demoCellActionPanel','historyPanel'];
 const panels = ALL_PANEL_IDS.map(id=>document.getElementById(id));
 
 function uid(prefix){ return prefix+'_'+Date.now()+'_'+Math.floor(Math.random()*1000); }
@@ -591,6 +621,18 @@ function mostRecentOccurrence(dayName, timeStr, now){
   return d;
 }
 function nextOccurrence(dayName, timeStr, now){ const d = mostRecentOccurrence(dayName, timeStr, now); d.setDate(d.getDate()+7); return d; }
+function countOccurrencesSince(day, time, startDateStr, now){
+  if(!startDateStr) return 0;
+  const start = new Date(startDateStr+'T00:00:00');
+  let occ = mostRecentOccurrence(day, time, now);
+  let count = 0, guard = 0;
+  while(occ >= start && guard < 1000){
+    count++;
+    occ = new Date(occ); occ.setDate(occ.getDate()-7);
+    guard++;
+  }
+  return count;
+}
 
 function lessonPriceOf(m){
   return (Number(PRICE_MAP[m.type])||0) / PACKAGE_TOTAL;
@@ -717,6 +759,7 @@ function render(){
         ${m.isOwnMember?`<div class="badge active" style="margin-top:5px;">Kendi Üyesi</div>`:''}
       </div>
       <div class="row-actions">
+        <button class="icon-btn" onclick="openHistory('${m.id}')">Geçmiş</button>
         <button class="icon-btn" onclick="openPayment('${m.id}')">Yeni Paket</button>
         <button class="icon-btn" onclick="openEdit('${m.id}')">Düzenle</button>
         <button class="icon-btn danger" onclick="deleteMember('${m.id}')">Sil</button>
@@ -756,6 +799,22 @@ function addSlotRow(slot){
   document.getElementById('f-schedule-list').appendChild(wrap);
 }
 document.getElementById('addScheduleSlotBtn').addEventListener('click', ()=>addSlotRow());
+document.getElementById('recalcRemainingBtn').addEventListener('click', ()=>{
+  const startVal = document.getElementById('f-start').value;
+  if(!startVal){ alert('Önce başlangıç tarihini girin.'); return; }
+  const now = new Date();
+  const rows = Array.from(document.querySelectorAll('#f-schedule-list .schedule-slot'));
+  if(rows.length===0){ alert('Önce en az bir haftalık ders programı satırı ekleyin.'); return; }
+  let totalOccurred = 0;
+  rows.forEach(wrap=>{
+    const day = wrap.querySelector('.slot-day').value;
+    const time = wrap.querySelector('.slot-time').value || '10:00';
+    totalOccurred += countOccurrencesSince(day, time, startVal, now);
+  });
+  const remaining = Math.max(0, PACKAGE_TOTAL - totalOccurred);
+  document.getElementById('f-remaining').value = remaining;
+  alert(`Başlangıçtan bugüne ${totalOccurred} seans geçmiş görünüyor. Kalan seans ${remaining} olarak dolduruldu — isterseniz elle değiştirebilirsiniz.`);
+});
 
 function readSlotRows(){
   const now = new Date();
@@ -799,7 +858,11 @@ function openEdit(id){
   const m = members.find(x=>x.id===id);
   if(!m) return;
   editingId = id; convertingDemoId = null;
-  document.getElementById('f-fee-wrap').style.display = 'none';
+  document.getElementById('f-fee-wrap').style.display = 'block';
+  document.getElementById('f-fee-label').textContent = 'İlk Kayıt Ücreti (₺)';
+  document.getElementById('f-fee-hint').textContent = 'Bu alan sadece ilk kayıt sırasında girilen ücreti düzeltir (örn. yanlış paket seçildiyse). Yeni bir ödeme eklemek için "Yeni Paket" butonunu kullanın.';
+  const initialPayment = (m.payments||[]).find(p=>p.note==='İlk kayıt ödemesi');
+  document.getElementById('f-fee').value = initialPayment ? initialPayment.amount : (PRICE_MAP[m.type]||'');
   document.getElementById('panelTitle').textContent = 'Üyeyi Düzenle';
   document.getElementById('f-type').innerHTML = packageOptionsHtml(m.type);
   document.getElementById('f-name').value = m.name;
@@ -830,6 +893,8 @@ function openFreshMemberPanel(prefill){
   editingId = null;
   convertingDemoId = prefill.demoId || null;
   document.getElementById('f-fee-wrap').style.display = 'block';
+  document.getElementById('f-fee-label').textContent = 'Ücret (₺)';
+  document.getElementById('f-fee-hint').textContent = 'Kayıt sırasında alınan ilk ödeme olarak kaydedilecek.';
   document.getElementById('panelTitle').textContent = 'Yeni Üye';
   document.getElementById('f-type').innerHTML = packageOptionsHtml('Grup Reformer');
   document.getElementById('f-name').value = prefill.name || '';
@@ -881,9 +946,15 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   if(editingId){
     const m = members.find(x=>x.id===editingId);
     Object.assign(m, {name, phone, type, total: PACKAGE_TOTAL, remaining, start, notes, schedule, isOwnMember});
+    if(fee>0){
+      m.payments = m.payments || [];
+      const initialPayment = m.payments.find(p=>p.note==='İlk kayıt ödemesi');
+      if(initialPayment){ initialPayment.amount = fee; initialPayment.type = type; }
+      else { m.payments.push({id:uid('p'), amount:fee, date: start||todayStr(), note:'İlk kayıt ödemesi', type}); }
+    }
   } else {
     newMemberId = uid('m');
-    const payments = fee>0 ? [{id:uid('p'), amount:fee, date: start||todayStr(), note:'İlk kayıt ödemesi'}] : [];
+    const payments = fee>0 ? [{id:uid('p'), amount:fee, date: start||todayStr(), note:'İlk kayıt ödemesi', type}] : [];
     members.push({id: newMemberId, name, phone, type, total: PACKAGE_TOTAL, remaining, start, notes, schedule, payments, isOwnMember});
   }
   await saveMembers();
@@ -912,6 +983,48 @@ document.querySelectorAll('#view-members .filter-chip').forEach(btn=>{
 });
 
 /* ---------- ÖDEME / PAKET YENİLEME ---------- */
+function openHistory(id){
+  const m = members.find(x=>x.id===id);
+  if(!m) return;
+  document.getElementById('historyTitle').textContent = m.name;
+  const st = statusOf(m);
+  const badgeText = st==='active' ? 'Aktif' : st==='low' ? 'Azalıyor' : 'Bitti';
+  const isFrozenNow = m.frozenUntil && todayStr() <= m.frozenUntil;
+
+  let html = `
+    <div class="week-block" style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:4px;">${escapeHtml(m.phone||'')}</div>
+      <div style="font-weight:600;margin-bottom:6px;">${escapeHtml(m.type)} · <span class="badge ${st}">${badgeText}</span> ${isFrozenNow?`<span class="badge frozen">Donduruldu · ${m.frozenUntil}</span>`:''}</div>
+      <div style="font-size:13px;color:var(--ink-soft);">Kalan Seans: <b style="color:var(--ink);">${m.remaining} / ${PACKAGE_TOTAL}</b></div>
+      <div style="font-size:13px;color:var(--ink-soft);">Başlangıç: ${m.start||'—'}</div>
+      <div style="font-size:12px;color:var(--ink-soft);margin-top:6px;">${scheduleSummary(m)}</div>
+      ${m.notes?`<div style="font-size:12px;color:var(--ink-soft);margin-top:6px;">Not: ${escapeHtml(m.notes)}</div>`:''}
+    </div>
+    <h4 style="font-size:13px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:8px;">Ödeme Geçmişi</h4>`;
+
+  const payments = (m.payments||[]).slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  if(payments.length===0){
+    html += '<div class="empty" style="padding:24px 0;"><div class="big" style="font-size:15px;">Hiç ödeme kaydı yok</div></div>';
+  } else {
+    html += '<div class="list">';
+    payments.forEach(p=>{
+      html += `<div class="row" style="grid-template-columns:1fr auto;padding:12px 14px;">
+        <div>
+          <div class="m-name" style="font-size:14px;">${p.date||'—'}</div>
+          <div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">${p.type?escapeHtml(p.type)+' · ':''}${escapeHtml(p.note||'')}</div>
+        </div>
+        <div class="sessions">${Number(p.amount||0).toLocaleString('tr-TR')}₺</div>
+      </div>`;
+    });
+    html += '</div>';
+    const totalAll = payments.reduce((s,p)=>s+Number(p.amount||0),0);
+    html += `<div style="text-align:right;margin-top:10px;font-size:13px;color:var(--ink-soft);">Toplam Ödenen: <b style="color:var(--ink);">${totalAll.toLocaleString('tr-TR')}₺</b></div>`;
+  }
+  document.getElementById('historyBody').innerHTML = html;
+  openPanel('historyPanel');
+}
+document.getElementById('historyCloseBtn').addEventListener('click', closeAllPanels);
+
 function openPayment(id){
   paymentForId = id;
   const m = members.find(x=>x.id===id);
@@ -933,7 +1046,7 @@ document.getElementById('paymentSaveBtn').addEventListener('click', async ()=>{
   const m = members.find(x=>x.id===paymentForId);
   if(!m) return;
   m.payments = m.payments || [];
-  m.payments.push({id: uid('p'), amount, date, note});
+  m.payments.push({id: uid('p'), amount, date, note: note || 'Paket Yenileme', type});
   m.type = type;
   m.remaining = (Number(m.remaining)||0) + PACKAGE_TOTAL;
   await saveMembers();
@@ -1150,6 +1263,7 @@ function renderScheduleGrid(){
   });
   tbody += '</tbody>';
   table.innerHTML = thead+tbody;
+  if(window.schedZoomCtl) schedZoomCtl.reset();
 }
 
 /* ---------- HÜCRE AKSİYON MENÜSÜ (Dondur / Tek Seferlik Değişiklik) ---------- */
@@ -1362,6 +1476,7 @@ function renderDemoGrid(){
   });
   tbody += '</tbody>';
   table.innerHTML = thead+tbody;
+  if(window.demoZoomCtl) demoZoomCtl.reset();
 }
 document.getElementById('demoTable').addEventListener('click', (e)=>{
   const entry = e.target.closest('.cell-entry[data-role="demo-entry"]');
@@ -1986,6 +2101,76 @@ document.getElementById('reminderList').addEventListener('click', async (e)=>{
   renderReminderList();
   renderReminderQueueBar();
 });
+
+/* ---------- TABLO İKİ PARMAK YAKINLAŞTIRMA (sadece mobil dokunmatik) ---------- */
+function initTableZoom(wrapId, sizerId, tableId){
+  const wrap = document.getElementById(wrapId);
+  const sizer = document.getElementById(sizerId);
+  const table = document.getElementById(tableId);
+  let scale = 1;
+  let startDist = 0, startScale = 1;
+  let naturalW = 0, naturalH = 0;
+  function measureNatural(){
+    const prevTransform = table.style.transform;
+    const prevWidth = table.style.width;
+    table.style.transform = 'none';
+    table.style.width = '';
+    naturalW = table.offsetWidth;
+    naturalH = table.offsetHeight;
+    table.style.transform = prevTransform;
+    table.style.width = prevWidth;
+  }
+  function applyScale(){
+    table.style.width = naturalW+'px';
+    table.style.transformOrigin = '0 0';
+    table.style.transform = `scale(${scale})`;
+    sizer.style.width = (naturalW*scale)+'px';
+    sizer.style.height = (naturalH*scale)+'px';
+  }
+  wrap.addEventListener('touchstart', (e)=>{
+    if(e.touches.length===2){
+      startDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      startScale = scale;
+    }
+  }, {passive:true});
+  wrap.addEventListener('touchmove', (e)=>{
+    if(e.touches.length===2){
+      e.preventDefault();
+      const dist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      if(startDist>0){
+        let newScale = startScale * (dist/startDist);
+        newScale = Math.min(3, Math.max(1, newScale));
+        scale = newScale;
+        applyScale();
+      }
+    }
+  }, {passive:false});
+  let lastTap = 0;
+  wrap.addEventListener('touchend', ()=>{
+    const now = Date.now();
+    if(now-lastTap < 300){
+      // Çift dokunma: yakınsa sıfırla, uzaksa 2x yakınlaştır
+      scale = scale>1.02 ? 1 : 2;
+      applyScale();
+    }
+    lastTap = now;
+  });
+  return {
+    reset(){
+      scale = 1;
+      table.style.transform = 'none';
+      table.style.width = '';
+      sizer.style.width = '';
+      sizer.style.height = '';
+      // Bir sonraki pinch için doğal boyutu yeniden ölç
+      requestAnimationFrame(measureNatural);
+    }
+  };
+}
+if('ontouchstart' in window){
+  window.schedZoomCtl = initTableZoom('schedTableWrap','schedZoomSizer','schedTable');
+  window.demoZoomCtl = initTableZoom('demoTableWrap','demoZoomSizer','demoTable');
+}
 
 initRole();
 </script>
