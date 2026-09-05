@@ -196,6 +196,7 @@
       <button class="filter-chip" data-filter="low">Azalan (≤2)</button>
       <button class="filter-chip" data-filter="done">Biten</button>
       <button class="btn-ghost" id="openFreezeBtn">Üye Dondur</button>
+      <button class="btn-ghost" id="openOneTimeBtn">Tek Seferlik Seans Ekle</button>
       <button class="btn-add" id="openAddBtn">+ Üye Ekle</button>
     </div>
     <div id="listArea"></div>
@@ -293,11 +294,16 @@
     </div>
     <div class="hint">Başlangıç tarihinden bugüne kadar, haftalık ders programına göre kaç seansın geçtiğini hesaplayıp kalanı otomatik doldurur.</div>
   </div>
-  <div class="field">
+  <div class="field" style="display:flex;align-items:center;gap:8px;">
+    <input type="checkbox" id="f-non-recurring" style="width:18px;height:18px;flex:none;" />
+    <label for="f-non-recurring" style="margin:0;font-size:14px;color:var(--ink);font-weight:500;">Tekrarsız Program</label>
+  </div>
+  <div class="field" id="f-schedule-section">
     <label>Haftalık Ders Programı</label>
     <div id="f-schedule-list"></div>
     <button type="button" class="btn-ghost" id="addScheduleSlotBtn">+ Gün/Saat Ekle</button>
   </div>
+  <div class="hint" id="f-non-recurring-hint" style="display:none;margin:-10px 0 16px;">Bu üyenin sabit bir haftalık programı yok. Dersleri, Ders Programı ekranından o hafta içinde ihtiyaç oldukça "Tekrarsız Seans Ekle" ile tek tek eklenecek.</div>
   <div class="field"><label>Not (opsiyonel)</label><input id="f-notes" placeholder="Sağlık notu, tercih vb." /></div>
   <div class="field" style="display:flex;align-items:center;gap:8px;">
     <input type="checkbox" id="f-own-member" style="width:18px;height:18px;flex:none;" />
@@ -330,6 +336,20 @@
   <div id="historyBody"></div>
   <div class="panel-actions">
     <button class="btn-secondary" style="flex:1;" id="historyCloseBtn">Kapat</button>
+  </div>
+</div>
+
+<!-- TEK SEFERLİK SEANS EKLE -->
+<div class="panel" id="oneTimeSessionPanel">
+  <h2>Tek Seferlik Seans Ekle</h2>
+  <div class="field"><label>Üye Ara</label><input id="ots-search" placeholder="İsim ile ara..." /></div>
+  <div class="field"><label>Üye Seç</label><div class="member-check-list" id="ots-member-list"></div></div>
+  <div class="field"><label>Tarih</label><input id="ots-date" type="date" /></div>
+  <div class="field"><label>Saat</label><input id="ots-time" type="time" /></div>
+  <div class="field"><label>Hoca</label><select id="ots-instructor"></select></div>
+  <div class="panel-actions">
+    <button class="btn-secondary" id="otsCancelBtn">Vazgeç</button>
+    <button class="btn-primary" id="otsSaveBtn">Kaydet</button>
   </div>
 </div>
 
@@ -392,6 +412,8 @@
     <button class="action-menu-btn" id="eaChangeBtn">🔁 Tek Seferlik Değişiklik</button>
     <button class="action-menu-btn" id="eaPostponeBtn">⏸️ Erteleme Hakkını Kullan</button>
     <div class="hint" style="margin-top:-4px;margin-bottom:14px;">Bu seans gri ve üstü çizili görünür, seanstan düşülmez ve hoca maaşına yazılmaz.</div>
+    <button class="action-menu-btn" id="eaAddOneTimeBtn">➕ Tekrarsız Seans Ekle</button>
+    <div class="hint" style="margin-top:-4px;">Bu saate, tıkladığınız üye değil, başka bir üyeyi tek seferlik olarak ekler.</div>
   </div>
   <div id="entryChangeForm" style="display:none;">
     <div class="field"><label>Yeni Gün</label><select id="ea-new-day"></select></div>
@@ -482,10 +504,12 @@ let currentTab = null;
 let eaContext = null;
 let vcContext = null;
 let demoCellContextId = null;
+let oneTimeSelectedMemberId = null;
+let oneTimeCellContext = null;
 
 const listArea = document.getElementById('listArea');
 const overlay = document.getElementById('overlay');
-const ALL_PANEL_IDS = ['panel','paymentPanel','freezePanel','demoAddPanel','entryActionPanel','virtualCancelPanel','adminLoginPanel','demoCellActionPanel','historyPanel'];
+const ALL_PANEL_IDS = ['panel','paymentPanel','freezePanel','demoAddPanel','entryActionPanel','virtualCancelPanel','adminLoginPanel','demoCellActionPanel','historyPanel','oneTimeSessionPanel'];
 const panels = ALL_PANEL_IDS.map(id=>document.getElementById(id));
 
 function uid(prefix){ return prefix+'_'+Date.now()+'_'+Math.floor(Math.random()*1000); }
@@ -661,6 +685,23 @@ function processSchedules(){
   let logChanged = false;
   members.forEach(m=>{
     (m.schedule||[]).forEach(slot=>{
+      if(slot.recurring===false){
+        if(slot.processed) return;
+        const [hh,mm] = (slot.time||'00:00').split(':').map(Number);
+        const target = new Date(slot.date+'T00:00:00');
+        target.setHours(hh||0, mm||0, 0, 0);
+        if(target <= now){
+          const isFrozen = m.frozenUntil && slot.date <= m.frozenUntil;
+          if(!isFrozen && m.remaining>0){
+            m.remaining -= 1;
+            logLesson(m, slot.instructorId, slot.date);
+            logChanged = true;
+          }
+          slot.processed = true;
+          changed = true;
+        }
+        return;
+      }
       const occ = mostRecentOccurrence(slot.day, slot.time, now);
       const occStr = fmtDate(occ);
       const hasActiveOverrideForThisOcc = slot.override && slot.override.active && slot.override.forOccDate === occStr;
@@ -864,6 +905,26 @@ function getSlotOccupants(day, time, instructorId, excludeMemberId){
   return occupants;
 }
 
+function getOneTimeOccupants(dateStr, time, instructorId, excludeMemberId){
+  const dayName = JS_DOW[new Date(dateStr+'T00:00:00').getDay()];
+  let occupants = [];
+  members.forEach(m=>{
+    if(m.id === excludeMemberId) return;
+    (m.schedule||[]).forEach(s=>{
+      if(s.recurring===false){
+        if(s.date===dateStr && s.time===time && s.instructorId===instructorId){
+          occupants.push({memberId:m.id, memberName:m.name, type:m.type});
+        }
+      } else {
+        if(s.day===dayName && s.time===time && s.instructorId===instructorId){
+          occupants.push({memberId:m.id, memberName:m.name, type:m.type});
+        }
+      }
+    });
+  });
+  return occupants;
+}
+
 function openEdit(id){
   const m = members.find(x=>x.id===id);
   if(!m) return;
@@ -881,18 +942,26 @@ function openEdit(id){
   document.getElementById('f-start').value = m.start||'';
   document.getElementById('f-notes').value = m.notes||'';
   document.getElementById('f-own-member').checked = !!m.isOwnMember;
+  document.getElementById('f-non-recurring').checked = !!m.isNonRecurring;
+  toggleScheduleSection();
   document.getElementById('f-schedule-list').innerHTML = '';
-  (m.schedule||[]).forEach(s=>addSlotRow(s));
+  (m.schedule||[]).filter(s=>s.recurring!==false).forEach(s=>addSlotRow(s));
   openPanel('panel');
 }
 document.getElementById('f-type').addEventListener('change', (e)=>{ document.getElementById('f-fee').value = PRICE_MAP[e.target.value]||''; });
+function toggleScheduleSection(){
+  const isNR = document.getElementById('f-non-recurring').checked;
+  document.getElementById('f-schedule-section').style.display = isNR ? 'none' : 'block';
+  document.getElementById('f-non-recurring-hint').style.display = isNR ? 'block' : 'none';
+}
+document.getElementById('f-non-recurring').addEventListener('change', toggleScheduleSection);
 
 /* ---------- PANEL YÖNETİMİ ---------- */
 function openPanel(id){ overlay.classList.add('open'); document.getElementById(id).classList.add('open'); }
 function closeAllPanels(){
   overlay.classList.remove('open');
   panels.forEach(p=>p.classList.remove('open'));
-  editingId = null; paymentForId = null; selectedFreezeMemberId = null; convertingDemoId = null; eaContext = null; vcContext = null; demoCellContextId = null;
+  editingId = null; paymentForId = null; selectedFreezeMemberId = null; convertingDemoId = null; eaContext = null; vcContext = null; demoCellContextId = null; oneTimeSelectedMemberId = null; oneTimeCellContext = null;
   document.getElementById('entryChangeForm').style.display='none';
   document.getElementById('entryActionMenu').style.display='block';
 }
@@ -914,6 +983,8 @@ function openFreshMemberPanel(prefill){
   document.getElementById('f-start').value = todayStr();
   document.getElementById('f-notes').value = '';
   document.getElementById('f-own-member').checked = false;
+  document.getElementById('f-non-recurring').checked = false;
+  toggleScheduleSection();
   document.getElementById('f-schedule-list').innerHTML = '';
   const slotCount = prefill.slotCount || 1;
   for(let i=0;i<slotCount;i++){
@@ -934,10 +1005,11 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const start = document.getElementById('f-start').value;
   const notes = document.getElementById('f-notes').value.trim();
   const isOwnMember = document.getElementById('f-own-member').checked;
-  const schedule = readSlotRows();
+  const isNonRecurring = document.getElementById('f-non-recurring').checked;
+  const recurringSchedule = isNonRecurring ? [] : readSlotRows();
   if(!name){ alert('Lütfen üye ismini girin.'); return; }
 
-  for(const slot of schedule){
+  for(const slot of recurringSchedule){
     const occupants = getSlotOccupants(slot.day, slot.time, slot.instructorId, editingId);
     const cap = CAPACITY[type] || 1;
     const typeGroup = groupOf(type);
@@ -955,7 +1027,9 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   let newMemberId = null;
   if(editingId){
     const m = members.find(x=>x.id===editingId);
-    Object.assign(m, {name, phone, type, total: PACKAGE_TOTAL, remaining, start, notes, schedule, isOwnMember});
+    const preservedOneTime = (m.schedule||[]).filter(s=>s.recurring===false);
+    const schedule = [...recurringSchedule, ...preservedOneTime];
+    Object.assign(m, {name, phone, type, total: PACKAGE_TOTAL, remaining, start, notes, schedule, isOwnMember, isNonRecurring});
     if(fee>0){
       m.payments = m.payments || [];
       const initialPayment = m.payments.find(p=>p.note==='İlk kayıt ödemesi');
@@ -965,7 +1039,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   } else {
     newMemberId = uid('m');
     const payments = fee>0 ? [{id:uid('p'), amount:fee, date: start||todayStr(), note:'İlk kayıt ödemesi', type}] : [];
-    members.push({id: newMemberId, name, phone, type, total: PACKAGE_TOTAL, remaining, start, notes, schedule, payments, isOwnMember});
+    members.push({id: newMemberId, name, phone, type, total: PACKAGE_TOTAL, remaining, start, notes, schedule: recurringSchedule, payments, isOwnMember, isNonRecurring});
   }
   await saveMembers();
 
@@ -1135,6 +1209,87 @@ document.getElementById('freezeRemoveBtn').addEventListener('click', async ()=>{
   render(); renderScheduleGrid();
 });
 
+/* ---------- TEK SEFERLİK SEANS EKLE (tekrarsız üyeler + herkes için) ---------- */
+function renderOneTimeMemberList(filterText){
+  const wrap = document.getElementById('ots-member-list');
+  const term = (filterText||'').toLowerCase();
+  const filtered = members.filter(m=>!term || m.name.toLowerCase().includes(term) || (m.phone||'').includes(term));
+  const nonRecurring = filtered.filter(m=>m.isNonRecurring);
+  const others = filtered.filter(m=>!m.isNonRecurring);
+  if(filtered.length===0){ wrap.innerHTML = '<div class="empty" style="padding:20px;">Üye bulunamadı</div>'; return; }
+  function rowHtml(m){
+    return `<label class="member-check-item ${oneTimeSelectedMemberId===m.id?'selected':''}">
+      <input type="radio" name="ots-radio" value="${m.id}" ${oneTimeSelectedMemberId===m.id?'checked':''}/>
+      ${escapeHtml(m.name)} ${m.isNonRecurring?'· <span style="color:var(--clay);">tekrarsız</span>':''}
+    </label>`;
+  }
+  let html = '';
+  if(nonRecurring.length>0){
+    html += '<div style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.03em;padding:4px 6px;">Tekrarsız Programlı Üyeler</div>';
+    html += nonRecurring.map(rowHtml).join('');
+  }
+  if(others.length>0){
+    if(nonRecurring.length>0) html += '<div style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.03em;padding:10px 6px 4px;border-top:1px solid var(--line);margin-top:6px;">Diğer Tüm Üyeler</div>';
+    html += others.map(rowHtml).join('');
+  }
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('input[type=radio]').forEach(r=>{
+    r.addEventListener('change', ()=>{ oneTimeSelectedMemberId = r.value; renderOneTimeMemberList(document.getElementById('ots-search').value); });
+  });
+}
+function openOneTimeSessionPanel(prefill){
+  prefill = prefill || {};
+  oneTimeSelectedMemberId = null;
+  oneTimeCellContext = prefill.day ? {day: prefill.day, time: prefill.time} : null;
+  document.getElementById('ots-search').value = '';
+  renderOneTimeMemberList('');
+  const date = prefill.day ? fmtDate(nextOccurrence(prefill.day, prefill.time, new Date())) : todayStr();
+  document.getElementById('ots-date').value = date;
+  document.getElementById('ots-time').value = prefill.time || '10:00';
+  document.getElementById('ots-instructor').innerHTML = instructors.map(i=>`<option value="${i.id}" ${i.id===prefill.instructorId?'selected':''}>${escapeHtml(i.name)}</option>`).join('');
+  openPanel('oneTimeSessionPanel');
+}
+document.getElementById('openOneTimeBtn').addEventListener('click', ()=>openOneTimeSessionPanel());
+document.getElementById('ots-search').addEventListener('input', (e)=>renderOneTimeMemberList(e.target.value));
+document.getElementById('otsCancelBtn').addEventListener('click', closeAllPanels);
+document.getElementById('eaAddOneTimeBtn').addEventListener('click', ()=>{
+  if(!eaContext) return;
+  const m = members.find(x=>x.id===eaContext.memberId);
+  const slot = m && (m.schedule||[]).find(s=>s.id===eaContext.slotId);
+  if(!slot) return;
+  const ctx = {day: slot.day, time: slot.time, instructorId: slot.instructorId};
+  closeAllPanels();
+  openOneTimeSessionPanel(ctx);
+});
+document.getElementById('otsSaveBtn').addEventListener('click', async ()=>{
+  if(!oneTimeSelectedMemberId){ alert('Lütfen bir üye seçin.'); return; }
+  const date = document.getElementById('ots-date').value;
+  const time = document.getElementById('ots-time').value || '10:00';
+  const instructorId = document.getElementById('ots-instructor').value;
+  if(!date){ alert('Lütfen bir tarih girin.'); return; }
+  const m = members.find(x=>x.id===oneTimeSelectedMemberId);
+  if(!m) return;
+
+  const occupants = getOneTimeOccupants(date, time, instructorId, m.id);
+  const cap = CAPACITY[m.type] || 1;
+  const typeGroup = groupOf(m.type);
+  const conflictingOccupant = occupants.find(o => groupOf(o.type) !== typeGroup);
+  if(conflictingOccupant){
+    alert(`${getInstructorName(instructorId)} · ${date} ${time} saatinde zaten "${conflictingOccupant.type}" dersi var. Bu saate "${m.type}" olarak eklenemez.`);
+    return;
+  }
+  if(occupants.length + 1 > cap){
+    alert(`${getInstructorName(instructorId)} · ${date} ${time} dersi dolu (${cap} kişilik kontenjan doldu).`);
+    return;
+  }
+
+  m.schedule = m.schedule || [];
+  m.schedule.push({id: uid('s'), recurring:false, date, time, instructorId, processed:false});
+  await saveMembers();
+  closeAllPanels();
+  render(); renderScheduleGrid();
+});
+
 /* ---------- HOCA SEKMELERİ (Ders Programı filtre) ---------- */
 function renderInstructorTabs(){
   const wrap = document.getElementById('instructorTabs');
@@ -1231,12 +1386,23 @@ function renderScheduleGrid(){
   const now = new Date();
   const times = getAllTimeSlots();
   const table = document.getElementById('schedTable');
+  const weekStart = fmtDate(mondayOf(now));
+  const weekEnd = fmtDate((()=>{ const d=mondayOf(now); d.setDate(d.getDate()+6); return d; })());
   let cellEntries = {};
   function key(d,t){ return d+'|'+t; }
   function pushEntry(d,t,entry){ const k=key(d,t); if(!cellEntries[k]) cellEntries[k]=[]; cellEntries[k].push(entry); }
 
   members.forEach(m=>{
     (m.schedule||[]).forEach(slot=>{
+      if(slot.recurring===false){
+        if(slot.processed) return;
+        if(slot.date < weekStart || slot.date > weekEnd) return; // sadece bu hafta gösterilir
+        if(currentInstructorFilter!=='all' && slot.instructorId!==currentInstructorFilter) return;
+        const dayName = JS_DOW[new Date(slot.date+'T00:00:00').getDay()];
+        const isFrozenNow = m.frozenUntil && todayStr() <= m.frozenUntil;
+        pushEntry(dayName, slot.time, {memberId:m.id, memberName:m.name, type:m.type, instructorId:slot.instructorId, slotId:slot.id, frozen:isFrozenNow, onetime:true});
+        return;
+      }
       const nextStr = fmtDate(nextOccurrence(slot.day, slot.time, now));
       const hasMove = slot.override && slot.override.active && slot.override.forOccDate === nextStr;
       const isPostponed = slot.postponedOccDate === nextStr;
@@ -1259,17 +1425,21 @@ function renderScheduleGrid(){
     tbody += `<tr><td class="time-cell">${t}</td>`;
     DAY_ORDER.forEach(day=>{
       const entries = cellEntries[key(day,t)] || [];
-      tbody += `<td class="slot-cell">`;
-      entries.forEach(e=>{
-        const cls = e.postponed ? 'postponed' : (e.frozen ? 'frozen' : (e.moved ? 'moved' : (e.virtual ? 'virtual' : '')));
-        const role = e.postponed ? 'sched-postponed' : (e.virtual ? 'sched-virtual' : 'sched-entry');
-        const tag = e.postponed ? ' (ertelendi)' : (e.virtual ? ' (tek seferlik)' : (e.moved ? ' (taşındı)' : ''));
-        tbody += `<div class="cell-entry ${cls}" data-role="${role}" data-member-id="${e.memberId}" data-slot-id="${e.slotId}">
-          <div class="en-name">${escapeHtml(e.memberName)}${tag}</div>
-          <div class="en-meta">${escapeHtml(e.type)}${currentInstructorFilter==='all'?' · '+escapeHtml(getInstructorName(e.instructorId)):''}</div>
-        </div>`;
-      });
-      tbody += `</td>`;
+      if(entries.length===0){
+        tbody += `<td class="slot-cell" data-role="sched-empty-add" data-day="${day}" data-time="${t}" style="cursor:pointer;"></td>`;
+      } else {
+        tbody += `<td class="slot-cell">`;
+        entries.forEach(e=>{
+          const cls = e.postponed ? 'postponed' : (e.frozen ? 'frozen' : (e.moved ? 'moved' : ((e.virtual||e.onetime) ? 'virtual' : '')));
+          const role = e.postponed ? 'sched-postponed' : (e.virtual ? 'sched-virtual' : 'sched-entry');
+          const tag = e.postponed ? ' (ertelendi)' : (e.virtual ? ' (tek seferlik)' : (e.onetime ? ' (tekrarsız)' : (e.moved ? ' (taşındı)' : '')));
+          tbody += `<div class="cell-entry ${cls}" data-role="${role}" data-member-id="${e.memberId}" data-slot-id="${e.slotId}">
+            <div class="en-name">${escapeHtml(e.memberName)}${tag}</div>
+            <div class="en-meta">${escapeHtml(e.type)}${currentInstructorFilter==='all'?' · '+escapeHtml(getInstructorName(e.instructorId)):''}</div>
+          </div>`;
+        });
+        tbody += `</td>`;
+      }
     });
     tbody += `</tr>`;
   });
@@ -1285,6 +1455,8 @@ document.getElementById('schedTable').addEventListener('click', (e)=>{
   if(postponedEntry){ openPostponeCancel(postponedEntry.dataset.memberId, postponedEntry.dataset.slotId); return; }
   const entry = e.target.closest('.cell-entry[data-role="sched-entry"]');
   if(entry){ openEntryAction(entry.dataset.memberId, entry.dataset.slotId); return; }
+  const emptyCell = e.target.closest('td[data-role="sched-empty-add"]');
+  if(emptyCell){ openOneTimeSessionPanel({day: emptyCell.dataset.day, time: emptyCell.dataset.time}); return; }
 });
 function openEntryAction(memberId, slotId){
   const m = members.find(x=>x.id===memberId);
