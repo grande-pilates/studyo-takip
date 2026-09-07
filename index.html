@@ -543,6 +543,17 @@ async function supaSet(key, valueStr){
   const { error } = await supabaseClient.from('studio_data').upsert({ key: key, value: valueStr, updated_at: new Date().toISOString() });
   showSaving(false);
   if(error){ console.error('Supabase yazma hatası ('+key+'):', error); alert('Kaydedilirken bir sorun oluştu. İnternet bağlantınızı ve Supabase ayarlarınızı kontrol edin.'); }
+  // Kaydettiğimiz anda kendi önbelleğimizi de güncelleyelim ki hemen ardından gelecek
+  // senkronizasyon taraması bunu "başkasından gelen değişiklik" sanıp gereksiz yeniden çizim yapmasın.
+  lastRaw[key] = valueStr;
+}
+// Tüm anahtarları TEK sorguda çeker (7 ayrı istek yerine) — hem hızlı hem daha az yük.
+async function supaGetAll(){
+  const { data, error } = await supabaseClient.from('studio_data').select('key,value');
+  if(error){ console.error('Supabase toplu okuma hatası:', error); return null; }
+  const map = {};
+  (data||[]).forEach(row=>{ map[row.key] = row.value; });
+  return map;
 }
 
 /* ---------- ROL / ADMİN (cihaza özel — localStorage) ---------- */
@@ -609,24 +620,46 @@ function buildTabs(){
 }
 
 /* ---------- VERİ YÜKLEME ---------- */
-async function loadAll(){
-  try{ members = JSON.parse(await supaGet('members') || '[]'); }catch(e){ members = []; }
-  members.forEach(m=>{ if(!m.schedule) m.schedule=[]; if(!m.payments) m.payments=[]; });
+let lastRaw = {}; // her anahtarın son görülen ham (JSON) hâli — değişmediyse yeniden çizim yapılmaz
+const DATA_KEYS = ['members','instructors','demos','demoLog','lessonLog','monthlyReports','reminderLog'];
 
-  let instRaw = null;
-  try{ instRaw = JSON.parse(await supaGet('instructors') || 'null'); }catch(e){ instRaw = null; }
-  if(!instRaw || instRaw.length===0){
-    instructors = [{id:uid('i'),name:'Hoca 1'},{id:uid('i'),name:'Hoca 2'},{id:uid('i'),name:'Hoca 3'}];
-    await saveInstructors();
-  } else { instructors = instRaw; }
+// Sunucudan gelen ham veriyi ilgili yerel değişkenlere uygular. Hiçbir şey değişmediyse
+// false döner (böylece gereksiz yere ekran yeniden çizilmez).
+function applyRemoteMap(map){
+  let changed = false;
+  if(map.members !== undefined && map.members !== lastRaw.members){
+    try{ members = JSON.parse(map.members || '[]'); }catch(e){ members = []; }
+    members.forEach(m=>{ if(!m.schedule) m.schedule=[]; if(!m.payments) m.payments=[]; });
+    lastRaw.members = map.members; changed = true;
+  }
+  if(map.instructors !== undefined && map.instructors !== lastRaw.instructors){
+    try{ const parsed = JSON.parse(map.instructors || 'null'); if(parsed && parsed.length){ instructors = parsed; } }catch(e){}
+    lastRaw.instructors = map.instructors; changed = true;
+  }
+  if(map.demos !== undefined && map.demos !== lastRaw.demos){
+    try{ demos = JSON.parse(map.demos || '[]'); }catch(e){ demos = []; }
+    lastRaw.demos = map.demos; changed = true;
+  }
+  if(map.demoLog !== undefined && map.demoLog !== lastRaw.demoLog){
+    try{ demoLog = JSON.parse(map.demoLog || '[]'); }catch(e){ demoLog = []; }
+    lastRaw.demoLog = map.demoLog; changed = true;
+  }
+  if(map.lessonLog !== undefined && map.lessonLog !== lastRaw.lessonLog){
+    try{ lessonLog = JSON.parse(map.lessonLog || '[]'); }catch(e){ lessonLog = []; }
+    lastRaw.lessonLog = map.lessonLog; changed = true;
+  }
+  if(map.monthlyReports !== undefined && map.monthlyReports !== lastRaw.monthlyReports){
+    try{ monthlyReports = JSON.parse(map.monthlyReports || '[]'); }catch(e){ monthlyReports = []; }
+    lastRaw.monthlyReports = map.monthlyReports; changed = true;
+  }
+  if(map.reminderLog !== undefined && map.reminderLog !== lastRaw.reminderLog){
+    try{ reminderLog = JSON.parse(map.reminderLog || '[]'); }catch(e){ reminderLog = []; }
+    lastRaw.reminderLog = map.reminderLog; changed = true;
+  }
+  return changed;
+}
 
-  try{ demos = JSON.parse(await supaGet('demos') || '[]'); }catch(e){ demos = []; }
-  try{ demoLog = JSON.parse(await supaGet('demoLog') || '[]'); }catch(e){ demoLog = []; }
-  try{ lessonLog = JSON.parse(await supaGet('lessonLog') || '[]'); }catch(e){ lessonLog = []; }
-  try{ monthlyReports = JSON.parse(await supaGet('monthlyReports') || '[]'); }catch(e){ monthlyReports = []; }
-  try{ reminderLog = JSON.parse(await supaGet('reminderLog') || '[]'); }catch(e){ reminderLog = []; }
-
-  processSchedules();
+function renderCurrentView(){
   renderStats();
   renderInstructorTabs();
   renderDemoInstructorTabs();
@@ -639,6 +672,54 @@ async function loadAll(){
   if(currentTab==='reports') renderReports();
   if(currentTab==='reminders') renderReminders();
 }
+
+async function loadAll(){
+  const map = await supaGetAll() || {};
+  applyRemoteMap(map);
+
+  if(!instructors || instructors.length===0){
+    instructors = [{id:uid('i'),name:'Hoca 1'},{id:uid('i'),name:'Hoca 2'},{id:uid('i'),name:'Hoca 3'}];
+    await saveInstructors();
+  }
+
+  processSchedules();
+  renderCurrentView();
+}
+
+// ---------- CANLI SENKRONİZASYON ----------
+// Başka bir cihazda/kullanıcıda yapılan değişikliklerin, sayfayı elle yenilemeden
+// kısa süre içinde burada da görünmesini sağlar.
+// 1) Düzenli aralıklarla sunucudan taze veri çeker (her cihazda çalışır, ekstra kurulum gerekmez).
+// 2) Supabase Realtime açıksa (Supabase panelinde bu tablo için "Realtime"/replication
+//    etkinleştirilirse), bir değişiklik olur olmaz ANINDA senkronize eder — polling'in
+//    30 sn beklemesine gerek kalmaz. Realtime kapalıysa bu adım sessizce hiçbir şey yapmaz,
+//    uygulama yine de aşağıdaki periyodik tarama ile senkron kalır.
+let syncInFlight = false;
+async function pollForChanges(){
+  if(syncInFlight) return;
+  syncInFlight = true;
+  try{
+    const map = await supaGetAll();
+    if(map) applyRemoteMap(map);
+    // processSchedules saatin geçip geçmediğine (gerçek zamana) bakar — başka kimse bir şey
+    // değiştirmemiş olsa bile HER taramada çalıştırılmalı (örn. "17:00 olunca otomatik yeşile
+    // dönsün" gibi zamana bağlı kurallar bunun sayesinde işler).
+    processSchedules();
+    renderCurrentView();
+  } finally {
+    syncInFlight = false;
+  }
+}
+function setupRealtimeSync(){
+  try{
+    supabaseClient
+      .channel('studio_data_live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'studio_data' }, ()=>{ pollForChanges(); })
+      .subscribe();
+  }catch(e){ console.warn('Realtime senkronizasyon kurulamadı, periyodik tarama ile devam edilecek.', e); }
+}
+setupRealtimeSync();
+setInterval(pollForChanges, 6000); // Realtime kapalı olsa bile en geç ~6 saniyede bir senkron olur.
 async function saveMembers(){ await supaSet('members', JSON.stringify(members)); }
 async function saveInstructors(){ await supaSet('instructors', JSON.stringify(instructors)); }
 async function saveDemos(){ await supaSet('demos', JSON.stringify(demos)); }
@@ -659,6 +740,18 @@ function mostRecentOccurrence(dayName, timeStr, now){
   return d;
 }
 function nextOccurrence(dayName, timeStr, now){ const d = mostRecentOccurrence(dayName, timeStr, now); d.setDate(d.getDate()+7); return d; }
+// "Bugünden itibaren 7 günlük kayan pencere"de verilen güne denk gelen TARİHİ verir.
+// nextOccurrence()'ın aksine saate bakmaz, sadece takvim gününe göre hesaplar — böylece
+// örn. "Pazartesi 15:00" saati geçtiğinde (henüz gece yarısı olmadan) sonuç aniden gelecek
+// haftaya sıçramaz. Ekrandaki "bu hafta hangi tarih" karşılaştırmaları için kullanılır.
+function occDateInWindow(dayName, now){
+  const targetDow = JS_DOW.indexOf(dayName);
+  const d = new Date(now);
+  d.setHours(0,0,0,0);
+  const offset = (targetDow - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + offset);
+  return d;
+}
 function countOccurrencesSince(day, time, startDateStr, now){
   if(!startDateStr) return 0;
   const start = new Date(startDateStr+'T00:00:00');
@@ -748,7 +841,9 @@ function processSchedules(){
   if(changed) saveMembers();
   if(logChanged) saveLessonLog();
 }
-setInterval(async ()=>{ processSchedules(); renderStats(); if(currentTab==='schedule') renderScheduleGrid(); if(currentTab==='members') render(); }, 30000);
+// Not: Sunucudan taze veri çekme ve arayüzü tekrar çizme işi artık yukarıdaki
+// pollForChanges() / setInterval(pollForChanges, 6000) tarafından yapılıyor.
+// (processSchedules zaten pollForChanges içinde, veri gerçekten değiştiyse çağrılıyor.)
 
 /* ---------- İSTATİSTİKLER ---------- */
 function statusOf(m){ if(m.remaining<=0) return 'done'; if(m.remaining<=2) return 'low'; return 'active'; }
@@ -1252,7 +1347,7 @@ function openOneTimeSessionPanel(prefill){
   oneTimeCellContext = prefill.day ? {day: prefill.day, time: prefill.time} : null;
   document.getElementById('ots-search').value = '';
   renderOneTimeMemberList('');
-  const date = prefill.day ? fmtDate(nextOccurrence(prefill.day, prefill.time, new Date())) : todayStr();
+  const date = prefill.day ? fmtDate(occDateInWindow(prefill.day, new Date())) : todayStr();
   document.getElementById('ots-date').value = date;
   document.getElementById('ots-time').value = prefill.time || '10:00';
   document.getElementById('ots-instructor').innerHTML = instructors.map(i=>`<option value="${i.id}" ${i.id===prefill.instructorId?'selected':''}>${escapeHtml(i.name)}</option>`).join('');
@@ -1486,10 +1581,11 @@ function renderScheduleGrid(){
         pushEntry(dayName, slot.time, {memberId:m.id, memberName:m.name, type:m.type, instructorId:slot.instructorId, slotId:slot.id, frozen:isFrozenNow, onetime:true});
         return;
       }
-      const nextStr = fmtDate(nextOccurrence(slot.day, slot.time, now));
-      // Not: .active kontrolü YOK - override bu haftanın oluşumuna aitse (işlenmiş olsa bile)
-      // orijinal hücre haftanın sonuna kadar "taşındı" (gri) görünmeye devam etmeli.
-      const hasMove = slot.override && slot.override.forOccDate === nextStr;
+      const nextStr = fmtDate(occDateInWindow(slot.day, now));
+      // override.active kontrolü eklendi: seans saati geçip otomatik düşüm yapıldığı an
+      // (processSchedules override.active'i false yapıyor) bu hücre normale (yeşile) döner
+      // ve karşı hücredeki kırmızı "tek seferlik" görünüm otomatik olarak kaybolur.
+      const hasMove = slot.override && slot.override.active && slot.override.forOccDate === nextStr;
       const isPostponed = slot.postponedOccDate === nextStr;
       const isFrozenNow = m.frozenUntil && todayStr() <= m.frozenUntil;
       if(currentInstructorFilter==='all' || slot.instructorId===currentInstructorFilter){
@@ -1567,7 +1663,7 @@ document.getElementById('eaPostponeBtn').addEventListener('click', async ()=>{
   const slot = m && (m.schedule||[]).find(s=>s.id===eaContext.slotId);
   if(!slot) return;
   const now = new Date();
-  const nextStr = fmtDate(nextOccurrence(slot.day, slot.time, now));
+  const nextStr = fmtDate(occDateInWindow(slot.day, now));
   if(!confirm(`${m.name} — ${slot.day} ${slot.time} dersi için erteleme hakkı kullanılsın mı? Bu seans gri/üstü çizili görünecek, seanstan düşülmeyecek ve maaş hesabına katılmayacak.`)) return;
   slot.postponedOccDate = nextStr;
   await saveMembers();
@@ -1595,7 +1691,7 @@ document.getElementById('eaChangeConfirm').addEventListener('click', async ()=>{
   const newTime = document.getElementById('ea-new-time').value || '10:00';
   const newInstructorId = document.getElementById('ea-new-instructor').value || slot.instructorId;
   const now = new Date();
-  const forOccDate = fmtDate(nextOccurrence(slot.day, slot.time, now));
+  const forOccDate = fmtDate(occDateInWindow(slot.day, now));
   slot.override = {active:true, day:newDay, time:newTime, instructorId:newInstructorId, forOccDate};
   await saveMembers();
   closeAllPanels();
@@ -1712,7 +1808,7 @@ function openDemoAddFromCell(day, time){
   const instructorId = currentDemoInstructorFilter!=='all' ? currentDemoInstructorFilter : (instructors[0]?instructors[0].id:null);
   document.getElementById('d-name').value = '';
   document.getElementById('d-phone').value = '';
-  const date = fmtDate(nextOccurrence(day, time, new Date()));
+  const date = fmtDate(occDateInWindow(day, new Date()));
   document.getElementById('d-date').value = date;
   document.getElementById('d-instructor').innerHTML = instructors.map(i=>`<option value="${i.id}" ${i.id===instructorId?'selected':''}>${escapeHtml(i.name)}</option>`).join('');
   refreshDemoTimeOptions(time);
