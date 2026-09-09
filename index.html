@@ -720,6 +720,18 @@ function setupRealtimeSync(){
 }
 setupRealtimeSync();
 setInterval(pollForChanges, 6000); // Realtime kapalı olsa bile en geç ~6 saniyede bir senkron olur.
+
+// ---------- ARKA PLANDAN DÖNÜŞTE ANINDA SENKRONİZASYON (özellikle iOS için kritik) ----------
+// iOS Safari, arka plana atılan sekmelerde JS zamanlayıcılarını (setInterval dahil) durdurur.
+// Bu yüzden bir telefon saatlerce arka planda kalabilir ve hafızasındaki kopya bayatlar.
+// Kullanıcı sekmeye geri döndüğü/uygulamayı yeniden açtığı AN, 6 saniyelik döngüyü beklemeden
+// anında sunucudan taze veri çekilir — böylece bayat veri üzerinde işlem yapıp kaydetme riski
+// en aza iner.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible'){ pollForChanges(); }
+});
+window.addEventListener('pageshow', ()=>{ pollForChanges(); });
+window.addEventListener('focus', ()=>{ pollForChanges(); });
 async function saveMembers(){ await supaSet('members', JSON.stringify(members)); }
 async function saveInstructors(){ await supaSet('instructors', JSON.stringify(instructors)); }
 async function saveDemos(){ await supaSet('demos', JSON.stringify(demos)); }
@@ -727,6 +739,51 @@ async function saveDemoLog(){ await supaSet('demoLog', JSON.stringify(demoLog));
 async function saveLessonLog(){ await supaSet('lessonLog', JSON.stringify(lessonLog)); }
 async function saveMonthlyReports(){ await supaSet('monthlyReports', JSON.stringify(monthlyReports)); }
 async function saveReminderLog(){ await supaSet('reminderLog', JSON.stringify(reminderLog)); }
+
+/* ---------- KAYDETMEDEN HEMEN ÖNCE TAZE VERİ ÇEKME ----------
+   Sekme uzun süre arka planda kalırsa (özellikle telefonlarda) zamanlayıcılar
+   durur ve hafızadaki kopya saatlerce bayatlayabilir. Bir kayıt/silme/düzenleme
+   işlemine başlamadan HEMEN ÖNCE bu fonksiyonlardan ilgili olanı çağrılarak
+   sunucudaki en güncel hâl çekilir; yerel değişiklik bunun ÜZERİNE uygulanır.
+   Böylece bayat bir kopyanın tamamı yazılıp başkasının (veya kendinizin başka
+   bir sekmede yaptığı) değişikliği silinmez. */
+async function refreshMembers(){
+  try{
+    const raw = await supaGet('members');
+    if(raw !== null){
+      members = JSON.parse(raw || '[]');
+      members.forEach(m=>{ if(!m.schedule) m.schedule=[]; if(!m.payments) m.payments=[]; });
+      lastRaw.members = raw;
+    }
+  }catch(e){ console.error('refreshMembers hata:', e); }
+}
+async function refreshInstructors(){
+  try{
+    const raw = await supaGet('instructors');
+    if(raw !== null){
+      const parsed = JSON.parse(raw || 'null');
+      if(parsed && parsed.length){ instructors = parsed; lastRaw.instructors = raw; }
+    }
+  }catch(e){ console.error('refreshInstructors hata:', e); }
+}
+async function refreshDemos(){
+  try{
+    const raw = await supaGet('demos');
+    if(raw !== null){ demos = JSON.parse(raw || '[]'); lastRaw.demos = raw; }
+  }catch(e){ console.error('refreshDemos hata:', e); }
+}
+async function refreshDemoLog(){
+  try{
+    const raw = await supaGet('demoLog');
+    if(raw !== null){ demoLog = JSON.parse(raw || '[]'); lastRaw.demoLog = raw; }
+  }catch(e){ console.error('refreshDemoLog hata:', e); }
+}
+async function refreshReminderLog(){
+  try{
+    const raw = await supaGet('reminderLog');
+    if(raw !== null){ reminderLog = JSON.parse(raw || '[]'); lastRaw.reminderLog = raw; }
+  }catch(e){ console.error('refreshReminderLog hata:', e); }
+}
 
 /* ---------- OTOMATİK SEANS DÜŞME + TEK SEFERLİK DEĞİŞİKLİK ---------- */
 function mostRecentOccurrence(dayName, timeStr, now){
@@ -925,6 +982,7 @@ function render(){
 
 async function deleteMember(id){
   if(!confirm('Bu üyeyi silmek istediğinize emin misiniz?')) return;
+  await refreshMembers();
   members = members.filter(x=>x.id!==id);
   await saveMembers();
   render(); renderScheduleGrid();
@@ -1112,6 +1170,7 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const isNonRecurring = document.getElementById('f-non-recurring').checked;
   const recurringSchedule = isNonRecurring ? [] : readSlotRows();
   if(!name){ alert('Lütfen üye ismini girin.'); return; }
+  await refreshMembers(); // kaydetmeden hemen önce sunucudaki en güncel hâli çek
 
   for(const slot of recurringSchedule){
     const occupants = getSlotOccupants(slot.day, slot.time, slot.instructorId, editingId);
@@ -1148,6 +1207,8 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   await saveMembers();
 
   if(convertingDemoId){
+    await refreshDemos();
+    await refreshDemoLog();
     const demo = demos.find(d=>d.id===convertingDemoId);
     if(demo){ demo.status='converted'; demo.memberId=newMemberId; await saveDemos(); }
     const logEntry = demoLog.find(d=>d.id===convertingDemoId);
@@ -1231,6 +1292,7 @@ document.getElementById('paymentSaveBtn').addEventListener('click', async ()=>{
   const date = document.getElementById('p-date').value || todayStr();
   const note = document.getElementById('p-note').value.trim();
   if(!amount || amount<=0){ alert('Lütfen geçerli bir tutar girin.'); return; }
+  await refreshMembers();
   const m = members.find(x=>x.id===paymentForId);
   if(!m) return;
   m.payments = m.payments || [];
@@ -1297,6 +1359,7 @@ document.getElementById('freezeSaveBtn').addEventListener('click', async ()=>{
   if(!selectedFreezeMemberId){ alert('Lütfen bir üye seçin.'); return; }
   const date = document.getElementById('fr-date').value;
   if(!date){ alert('Lütfen bir tarih girin.'); return; }
+  await refreshMembers();
   const m = members.find(x=>x.id===selectedFreezeMemberId);
   if(!m) return;
   m.frozenUntil = date;
@@ -1305,6 +1368,7 @@ document.getElementById('freezeSaveBtn').addEventListener('click', async ()=>{
   render(); renderScheduleGrid();
 });
 document.getElementById('freezeRemoveBtn').addEventListener('click', async ()=>{
+  await refreshMembers();
   const m = members.find(x=>x.id===selectedFreezeMemberId);
   if(!m) return;
   delete m.frozenUntil;
@@ -1371,6 +1435,7 @@ document.getElementById('otsSaveBtn').addEventListener('click', async ()=>{
   const time = document.getElementById('ots-time').value || '10:00';
   const instructorId = document.getElementById('ots-instructor').value;
   if(!date){ alert('Lütfen bir tarih girin.'); return; }
+  await refreshMembers();
   const m = members.find(x=>x.id===oneTimeSelectedMemberId);
   if(!m) return;
 
@@ -1409,6 +1474,7 @@ function openOneTimeEntryAction(memberId, slotId){
 document.getElementById('oneTimeEntryCloseBtn').addEventListener('click', closeAllPanels);
 document.getElementById('oneTimeDeleteBtn').addEventListener('click', async ()=>{
   if(!oneTimeEntryContext) return;
+  await refreshMembers();
   const m = members.find(x=>x.id===oneTimeEntryContext.memberId);
   if(!m) return;
   const slot = (m.schedule||[]).find(s=>s.id===oneTimeEntryContext.slotId);
@@ -1521,6 +1587,7 @@ document.getElementById('instMgmtList').addEventListener('click', async (e)=>{
     const primPercent = parseFloat(row.querySelector('.inst-prim-input').value);
     const ownPrim = parseFloat(row.querySelector('.inst-own-prim-input').value);
     if(!name){ alert('Lütfen hoca adını girin.'); return; }
+    await refreshInstructors();
     const inst = instructors.find(i=>i.id===id);
     if(inst){
       inst.name = name;
@@ -1531,6 +1598,7 @@ document.getElementById('instMgmtList').addEventListener('click', async (e)=>{
     }
   } else if(e.target.classList.contains('inst-remove-btn')){
     if(!confirm('Bu hocayı silmek istediğinize emin misiniz? Bu hocaya bağlı ders programları kalabilir.')) return;
+    await refreshInstructors();
     instructors = instructors.filter(i=>i.id!==id);
     await saveInstructors();
     renderInstructorTabs(); renderDemoInstructorTabs(); renderInstructorMgmt();
@@ -1539,6 +1607,7 @@ document.getElementById('instMgmtList').addEventListener('click', async (e)=>{
 document.getElementById('addInstructorBtn').addEventListener('click', async ()=>{
   const name = prompt('Yeni hocanın adı:');
   if(!name || !name.trim()) return;
+  await refreshInstructors();
   instructors.push({id: uid('i'), name: name.trim(), primPercent:null, ownMemberPrimPercent:null});
   await saveInstructors();
   renderInstructorTabs(); renderDemoInstructorTabs(); renderInstructorMgmt();
@@ -1659,6 +1728,7 @@ document.getElementById('eaFreezeBtn').addEventListener('click', ()=>{
 });
 document.getElementById('eaPostponeBtn').addEventListener('click', async ()=>{
   if(!eaContext) return;
+  await refreshMembers();
   const m = members.find(x=>x.id===eaContext.memberId);
   const slot = m && (m.schedule||[]).find(s=>s.id===eaContext.slotId);
   if(!slot) return;
@@ -1684,6 +1754,7 @@ document.getElementById('eaChangeBtn').addEventListener('click', ()=>{
 document.getElementById('eaChangeCancel').addEventListener('click', closeAllPanels);
 document.getElementById('eaChangeConfirm').addEventListener('click', async ()=>{
   if(!eaContext) return;
+  await refreshMembers();
   const m = members.find(x=>x.id===eaContext.memberId);
   const slot = m && (m.schedule||[]).find(s=>s.id===eaContext.slotId);
   if(!slot) return;
@@ -1728,6 +1799,7 @@ function openPostponeCancel(memberId, slotId){
 document.getElementById('vcCloseBtn').addEventListener('click', closeAllPanels);
 document.getElementById('vcCancelBtn').addEventListener('click', async ()=>{
   if(!vcContext) return;
+  await refreshMembers();
   const m = members.find(x=>x.id===vcContext.memberId);
   const slot = m && (m.schedule||[]).find(s=>s.id===vcContext.slotId);
   if(slot){
@@ -1795,6 +1867,8 @@ document.getElementById('demoSaveBtn').addEventListener('click', async ()=>{
     refreshDemoTimeOptions();
     return;
   }
+  await refreshDemos();
+  await refreshDemoLog();
   const newDemo = {id: uid('d'), name, phone, date, time, instructorId, status:'pending'};
   demos.push(newDemo);
   demoLog.push({...newDemo});
@@ -1910,6 +1984,8 @@ function convertDemo(demoId){
   openFreshMemberPanel({name:d.name, phone:d.phone, instructorId:d.instructorId, slotCount:2, demoId:d.id});
 }
 async function rejectDemo(demoId){
+  await refreshDemos();
+  await refreshDemoLog();
   const d = demos.find(x=>x.id===demoId);
   if(!d) return;
   d.status = 'rejected';
@@ -1920,6 +1996,7 @@ async function rejectDemo(demoId){
 }
 async function deleteDemo(demoId){
   if(!confirm('Bu demo kaydını silmek istediğinize emin misiniz? (Not: kayıt "Demo Değerlendirme > Tüm Demo Kayıtları" bölümünde saklanmaya devam edecek.)')) return;
+  await refreshDemos();
   demos = demos.filter(x=>x.id!==demoId);
   await saveDemos();
   renderDemoGrid();
@@ -1987,6 +2064,7 @@ function renderDemoEvaluation(){
 }
 async function deleteDemoLogEntry(logId){
   if(!confirm('Bu arşiv kaydını kalıcı olarak silmek istediğinize emin misiniz?')) return;
+  await refreshDemoLog();
   demoLog = demoLog.filter(x=>x.id!==logId);
   await saveDemoLog();
   renderDemoEvaluation();
